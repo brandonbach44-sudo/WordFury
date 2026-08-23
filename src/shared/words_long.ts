@@ -9814,6 +9814,7 @@ export const LONG_VALID_WORDS = new Set([
   'stupefied',
   'stupendous',
   'stupidity',
+  'stuttered',
   'stuttering',
   'stylishly',
   'stylistic',
