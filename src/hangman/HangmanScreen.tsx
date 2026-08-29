@@ -36,7 +36,8 @@ import {
   getTodayDateString,
   loadDailyStats,
   saveDailyResult,
-  dateToSeed,
+  pickDailyCategory,
+  pickDailyWordFromCategory,
   loadDailyProgress,
   saveDailyProgress,
   clearDailyProgress,
@@ -503,27 +504,19 @@ export default function HangmanScreen() {
       return;
     }
 
-    // Mulberry32 PRNG — same algorithm used across all Word Fury daily modes.
-    // Statistically independent outputs for consecutive yyyymmdd seeds, so
-    // consecutive days never repeat the same category or word.
-    function mulberry32(seed: number): () => number {
-      return function (): number {
-        seed |= 0;
-        seed = (seed + 0x6d2b79f5) | 0;
-        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-      };
-    }
-    const seed = dateToSeed(new Date());
-    const rand = mulberry32(seed);
+    // Category pick avoids whatever ran in the last few days (see
+    // pickDailyCategory) so a category can't feel like it's "every day" —
+    // real feedback from a daily player who kept landing on the same one or
+    // two categories, even though pure independent randomness was working as
+    // designed and just happened to cluster.
+    const today = new Date();
     const categoryNames = Object.keys(WORD_CATEGORIES);
-    const pickedCategory = categoryNames[Math.floor(rand() * categoryNames.length)];
+    const pickedCategory = pickDailyCategory(today, categoryNames);
     // Filter the category before picking so a profane word can never be the
     // system-chosen answer, even if one is added to the word data later.
     const categoryWords: string[] = WORD_CATEGORIES[pickedCategory]
       .filter((w) => !PROFANITY_BLOCKLIST.has(w.toLowerCase()));
-    const pickedWord = categoryWords[Math.floor(rand() * categoryWords.length)];
+    const pickedWord = pickDailyWordFromCategory(today, categoryWords);
     const dailyEntry = { word: pickedWord, category: pickedCategory };
 
     if (!dailyEntry) {

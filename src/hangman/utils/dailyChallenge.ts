@@ -15,6 +15,86 @@ export function getDailyWordIndex(wordList: any[], date: Date = new Date()): num
   return seed % wordList.length;
 }
 
+// Mulberry32 PRNG — same algorithm used across all Word Fury daily modes.
+function mulberry32(seed: number): () => number {
+  return function (): number {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// A category being independently random each day still produces real streaks
+// — over a year of true-independent draws across 15 categories, a 9-day span
+// where two categories cover 6-7 of the days is normal, not a bug. But it
+// reads to a daily player as "it's always dinosaurs" (TestFlight feedback,
+// Aug 2026), so the fix isn't a better PRNG, it's a no-repeat window: exclude
+// whichever categories ran in the last CATEGORY_REPEAT_AVOID_DAYS days from
+// today's pool.
+//
+// The avoid-set has to be built from each day's *actual* (already-filtered)
+// category, not its raw unfiltered pick — using the raw pick for the lookback
+// was tried first and let repeats slip through anyway (verified by
+// simulation), because a day's real assignment can itself have been shifted
+// away from its raw pick by the same rule. So today's category is computed by
+// walking forward from a fixed epoch, carrying the actual rolling history —
+// still a pure function of the date, still no persisted state, just more of
+// the computation. Cheap even after years of daily use: a few thousand
+// iterations of one filter + one PRNG call is microseconds, and it only runs
+// once per Daily start, not per render.
+const CATEGORY_REPEAT_AVOID_DAYS = 6;
+const CATEGORY_EPOCH = new Date(2026, 0, 1);
+
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function rawCategoryForSeed(seed: number, categoryNames: string[]): string {
+  const rand = mulberry32(seed);
+  return categoryNames[Math.floor(rand() * categoryNames.length)];
+}
+
+/**
+ * Deterministic per-day category pick, excluding whatever actually ran in the
+ * preceding CATEGORY_REPEAT_AVOID_DAYS days. Falls back to the raw,
+ * unfiltered pick for any date before CATEGORY_EPOCH (shouldn't happen in
+ * practice — it predates the app).
+ */
+export function pickDailyCategory(date: Date, categoryNames: string[]): string {
+  const days = Math.round(
+    (startOfDay(date).getTime() - startOfDay(CATEGORY_EPOCH).getTime()) / 86400000,
+  );
+  if (days < 0) {
+    return rawCategoryForSeed(dateToSeed(date), categoryNames);
+  }
+
+  const recent: string[] = [];
+  let picked = '';
+  for (let i = 0; i <= days; i++) {
+    const d = new Date(CATEGORY_EPOCH);
+    d.setDate(d.getDate() + i);
+    const seed = dateToSeed(d);
+    const avoidSet = new Set(recent.slice(-CATEGORY_REPEAT_AVOID_DAYS));
+    const pool = categoryNames.filter((c) => !avoidSet.has(c));
+    const candidates = pool.length > 0 ? pool : categoryNames;
+    const rand = mulberry32(seed);
+    picked = candidates[Math.floor(rand() * candidates.length)];
+    recent.push(picked);
+  }
+  return picked;
+}
+
+/** Word pick for a given category, deterministic per day + category. */
+export function pickDailyWordFromCategory(date: Date, words: string[]): string {
+  // Offset the seed so the word draw isn't correlated with the category
+  // draw's internal state for the same date.
+  const seed = dateToSeed(date) + 1;
+  const rand = mulberry32(seed);
+  return words[Math.floor(rand() * words.length)];
+}
+
 // Today's date: "YYYY-MM-DD", in the device's local timezone — not UTC, so
 // the daily reset lines up with the player's actual midnight.
 function toLocalDateString(d: Date): string {
