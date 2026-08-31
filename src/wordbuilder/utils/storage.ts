@@ -427,6 +427,45 @@ export const clearDailyBuilderProgress = async (): Promise<void> => {
   }
 };
 
+// ==================== DAILY LETTERS CACHE ====================
+// generateDailyLetters() is a pure function of the date, but it retries
+// candidate letter sets against isPlayable(), which checks the live
+// dictionary (shared/words.ts) — so if the dictionary changes between two
+// fresh (never-yet-played) opens of the Daily on the same calendar day, a
+// candidate that used to fail the "at least 8 formable words" check can pass
+// instead (or vice versa), silently handing out a different set of letters
+// for "today." Once a Daily attempt is actually started, the in-progress
+// autosave above already pins the letters for the rest of that session — this
+// cache closes the remaining gap: two fresh starts, no play in between, same
+// day. Same pattern as Word Ladder's daily-puzzle cache.
+const DAILY_LETTERS_KEY = 'wordbuilder_daily_letters_v1';
+
+export interface CachedDailyLetters {
+  dateISO: string; // YYYY-MM-DD — a cache from a different day is stale/ignored
+  letters: string[];
+}
+
+export const loadCachedDailyLetters = async (): Promise<CachedDailyLetters | null> => {
+  try {
+    const raw = await AsyncStorage.getItem(DAILY_LETTERS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || parsed.dateISO !== getTodayDateString()) return null;
+    return parsed;
+  } catch (error) {
+    console.error('Error loading cached daily letters:', error);
+    return null;
+  }
+};
+
+export const saveCachedDailyLetters = async (cached: CachedDailyLetters): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(DAILY_LETTERS_KEY, JSON.stringify(cached));
+  } catch (error) {
+    console.error('Error saving cached daily letters:', error);
+  }
+};
+
 // ==================== DAILY STATS HELPERS ====================
 
 export const getDailyAverageScore = (daily: DailyChallenge): number => {

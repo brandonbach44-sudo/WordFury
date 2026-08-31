@@ -70,6 +70,8 @@ import {
   type WordBuilderDailyProgress,
   loadWordsmithDailyHistory,
   saveWordsmithDailyHistoryEntry,
+  loadCachedDailyLetters,
+  saveCachedDailyLetters,
 } from '../../src/wordbuilder/utils/storage';
 import { TierName } from '../../src/wordbuilder/utils/tiers';
 import {
@@ -658,9 +660,23 @@ export default function WordBuilder() {
       return;
     }
 
+    // Pin today's letters the first time they're generated (see
+    // loadCachedDailyLetters/saveCachedDailyLetters) rather than recomputing
+    // them fresh on every start — generateDailyLetters() reads the live
+    // dictionary, so recomputing could hand out different letters than an
+    // earlier start today if the dictionary changed in between.
+    const cached = await loadCachedDailyLetters();
+    let dailyLetters: string[];
+    if (cached) {
+      dailyLetters = cached.letters;
+    } else {
+      dailyLetters = generateDailyLetters();
+      await saveCachedDailyLetters({ dateISO: getTodayDateString(), letters: dailyLetters });
+    }
+
     setGameMode('daily');
     setLetterCount(6);
-    setLetters(generateDailyLetters());
+    setLetters(dailyLetters);
     setSelectedIndices([]);
     setCurrentWord('');
     setScore(0);
