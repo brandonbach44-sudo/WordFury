@@ -11,8 +11,10 @@ import {
   DailyLockState,
   DailyProgressState,
   getTodayDateString,
+  loadCachedDailyPuzzle,
   loadDailyLock,
   loadDailyProgress,
+  saveCachedDailyPuzzle,
 } from '../../src/wordladder/utils/ladderStorage';
 import LadderPlayScreen from '../../src/wordladder/screens/LadderPlayScreen';
 
@@ -28,15 +30,47 @@ export default function WordLadderDailyScreen() {
   // artificial delay is needed — and a delay only showed players a spinner.
   // The word graph is pre-warmed at app startup (see app/_layout.tsx), so this
   // is fast enough to run inline.
+  //
+  // The puzzle itself is cached the first time it's generated for a date
+  // (loadCachedDailyPuzzle/saveCachedDailyPuzzle) rather than recomputed on
+  // every mount — generateDailyLadder is a pure function of the date, but it
+  // reads the live word list, so recomputing it fresh could silently hand a
+  // returning player a different puzzle than the one they already saw today
+  // if the dictionary changed underneath them (e.g. an app update installing
+  // mid-day). The cache is what actually pins "today's puzzle" in place.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const generatedPuzzle = generateDailyLadder(new Date());
-      const [existingLock, existingProgress] = await Promise.all([
+      const [existingLock, existingProgress, cached] = await Promise.all([
         loadDailyLock(),
         loadDailyProgress(),
+        loadCachedDailyPuzzle(),
       ]);
       if (cancelled) return;
+
+      let generatedPuzzle: LadderPuzzle;
+      if (cached) {
+        generatedPuzzle = {
+          start: cached.start,
+          end: cached.end,
+          par: cached.par,
+          wordLength: cached.wordLength,
+          difficulty: 'medium',
+          solutionPath: cached.solutionPath,
+        };
+      } else {
+        generatedPuzzle = generateDailyLadder(new Date());
+        await saveCachedDailyPuzzle({
+          dateISO: getTodayDateString(),
+          start: generatedPuzzle.start,
+          end: generatedPuzzle.end,
+          par: generatedPuzzle.par,
+          wordLength: generatedPuzzle.wordLength,
+          solutionPath: generatedPuzzle.solutionPath,
+        });
+      }
+      if (cancelled) return;
+
       if (existingLock && existingLock.dateISO === getTodayDateString()) {
         setLock(existingLock);
       } else if (existingProgress) {

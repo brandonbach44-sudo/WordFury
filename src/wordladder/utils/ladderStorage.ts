@@ -9,6 +9,7 @@ import type { LadderDifficulty } from './generator';
 const STATS_KEY = 'wordladder_stats_v1';
 const DAILY_LOCK_KEY = 'wordladder_daily_lock_v1';
 const DAILY_PROGRESS_KEY = 'wordladder_daily_progress_v1';
+const DAILY_PUZZLE_KEY = 'wordladder_daily_puzzle_v1';
 const PREFS_KEY = 'wordladder_prefs_v1';
 
 // ── Prefs ────────────────────────────────────────────────────────────────
@@ -142,6 +143,48 @@ export async function saveDailyLock(lock: DailyLockState): Promise<void> {
     await AsyncStorage.setItem(DAILY_LOCK_KEY, JSON.stringify(lock));
   } catch (e) {
     console.warn('saveDailyLock error', e);
+  }
+}
+
+// ── Daily puzzle cache (pin today's puzzle the first time it's generated) ──
+// generateDailyLadder() is a pure function of the date, but it also reads
+// whatever word list is on-device *right now* — so if the dictionary changes
+// between two opens on the same calendar day (a new build installing mid-day
+// with an edited word file, which now happens routinely as tester-reported
+// words get added), the "same" date seed can pick a different start/end pair
+// out of the shifted pool. A tester reported exactly this: a different start
+// word for the same Daily than she'd seen earlier that day. Caching the
+// puzzle the first time it's generated each day, and reusing that cached copy
+// for the rest of the day regardless of what the dictionary does later, is
+// what actually makes "today's puzzle" a fixed thing rather than a
+// recomputation that happens to usually agree with itself.
+export type CachedDailyPuzzle = {
+  dateISO: string; // YYYY-MM-DD — a cache from a different day is stale/ignored
+  start: string;
+  end: string;
+  par: number;
+  wordLength: number;
+  solutionPath: string[];
+};
+
+export async function loadCachedDailyPuzzle(): Promise<CachedDailyPuzzle | null> {
+  try {
+    const raw = await AsyncStorage.getItem(DAILY_PUZZLE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || parsed.dateISO !== getTodayDateString()) return null;
+    return parsed;
+  } catch (e) {
+    console.warn('loadCachedDailyPuzzle error', e);
+    return null;
+  }
+}
+
+export async function saveCachedDailyPuzzle(puzzle: CachedDailyPuzzle): Promise<void> {
+  try {
+    await AsyncStorage.setItem(DAILY_PUZZLE_KEY, JSON.stringify(puzzle));
+  } catch (e) {
+    console.warn('saveCachedDailyPuzzle error', e);
   }
 }
 
