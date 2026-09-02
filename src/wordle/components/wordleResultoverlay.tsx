@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: "100%",
     gap: 10,
-    marginTop: 14,
+    marginTop: 24,
   },
   primaryButton: {
     borderWidth: 2,
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   shareButton: {
-    marginTop: 10,
+    marginTop: 18,
     borderRadius: 999,
     paddingVertical: 12,
     paddingHorizontal: 20,
