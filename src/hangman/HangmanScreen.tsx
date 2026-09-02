@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   infoValue: { fontSize: 16, fontWeight: 'bold' },
   infoDivider: { width: 1, marginHorizontal: 12 },
   figureContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
-  keyboardContainer: { marginTop: 'auto', paddingBottom: 16 },
+  keyboardContainer: { paddingBottom: 16 },
   guessWordButton: { marginHorizontal: 20, marginBottom: 10, paddingVertical: 12, borderRadius: 12, alignItems: 'center', borderWidth: 2 },
   guessWordButtonText: { fontSize: 16, fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },

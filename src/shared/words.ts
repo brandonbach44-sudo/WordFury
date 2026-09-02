@@ -2193,6 +2193,7 @@ export const VALID_WORDS = new Set([
 'basketry',
 'baskets',
 'basking',
+'basks',
 'basmati',
 'basque',
 'basques',
