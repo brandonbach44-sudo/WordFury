@@ -2493,7 +2493,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "flex-start",
   },
+  // flex:1 is required here — without it this row has no definite height for
+  // its ScrollView children to stretch into, so content gets clipped by the
+  // overflow:hidden wrapper before it reaches the true screen bottom.
   tabStrip: {
+    flex: 1,
     width: SCREEN_WIDTH * 3,
     flexDirection: "row",
     alignSelf: "flex-start",

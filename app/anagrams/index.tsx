@@ -546,7 +546,10 @@ const styles = StyleSheet.create({
   segmentButtonText: { fontSize: 14, fontWeight: '500' },
 
   tabStripWrapper: { flex: 1, overflow: 'hidden', alignItems: 'flex-start' },
-  tabStrip: { flexDirection: 'row' },
+  // flex:1 is required here — without it this row has no definite height for
+  // its ScrollView children to stretch into, so content gets clipped by the
+  // overflow:hidden wrapper before it reaches the true screen bottom.
+  tabStrip: { flex: 1, flexDirection: 'row' },
   tabContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 },
 
   dailyCard: { borderRadius: 16, padding: 20, borderWidth: 2, marginBottom: 24 },

@@ -1,8 +1,15 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Dimensions, LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+// How far (in px) a tile fades in/out as it crosses the top or bottom edge of
+// its container. The container clips with overflow:hidden, so without this a
+// tile mid-crossing renders as a hard, flat-cut shape — exactly the "cutoffs
+// at the top and bottom" look reported by testers. Fading it to transparent
+// before it reaches the clip line means the clip never shows anything.
+const EDGE_FADE = 45;
 
 interface TileConfig {
   id: number;
@@ -14,10 +21,24 @@ interface TileConfig {
   seedY: number; // >= 0 → starts mid-screen (pre-seeded); -1 → starts from top after delay
 }
 
-function FallingTile({ tile }: { tile: TileConfig }) {
-  const totalDistance = SCREEN_HEIGHT + tile.size + 120;
+function FallingTile({ tile, areaHeight }: { tile: TileConfig; areaHeight: number }) {
+  const totalDistance = areaHeight + tile.size + 120;
   const isPreSeeded = tile.seedY >= 0;
   const translateY = useRef(new Animated.Value(isPreSeeded ? tile.seedY : -tile.size - 20)).current;
+
+  const bottomEdge = areaHeight - tile.size;
+  const opacity = translateY.interpolate({
+    inputRange: [
+      -tile.size - 20,
+      -EDGE_FADE,
+      0,
+      Math.max(0, bottomEdge - EDGE_FADE),
+      bottomEdge,
+      totalDistance,
+    ],
+    outputRange: [0, 0, 1, 1, 0, 0],
+    extrapolate: 'clamp',
+  });
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
@@ -65,6 +86,7 @@ function FallingTile({ tile }: { tile: TileConfig }) {
         {
           left: tile.startX,
           top: 0,
+          opacity,
           transform: [{ translateY }],
         },
       ]}
@@ -88,34 +110,55 @@ function FallingTile({ tile }: { tile: TileConfig }) {
 }
 
 export function FallingLetters() {
-  // 12 pre-seeded tiles scattered across the screen at mount — immediate visual density
-  const preSeeded: TileConfig[] = Array.from({ length: 12 }, (_, i) => ({
-    id: i,
-    letter: LETTERS[Math.floor(Math.random() * LETTERS.length)],
-    startX: Math.random() * (SCREEN_WIDTH - 60),
-    delay: 0,
-    duration: 10000 + Math.random() * 8000,
-    size: 40 + Math.random() * 20,
-    seedY: Math.random() * SCREEN_HEIGHT * 0.85,
-  }));
+  // Measured from the actual rendered box (via onLayout) rather than the raw
+  // device window height, since this container sits inside a SafeAreaView and
+  // is usually smaller than the window by the status bar / home indicator.
+  // Tile positions and the fade math below are generated from this real
+  // height, so nothing spawns already past the true visible bottom edge.
+  const [areaHeight, setAreaHeight] = useState(0);
 
-  // 8 incoming tiles with tight stagger to fill gaps without bunching
-  const incoming: TileConfig[] = Array.from({ length: 8 }, (_, i) => ({
-    id: 12 + i,
-    letter: LETTERS[Math.floor(Math.random() * LETTERS.length)],
-    startX: Math.random() * (SCREEN_WIDTH - 60),
-    delay: 500 + Math.random() * 5000, // 0.5–5.5 s stagger
-    duration: 10000 + Math.random() * 8000,
-    size: 40 + Math.random() * 20,
-    seedY: -1,
-  }));
+  const tiles = useMemo<TileConfig[]>(() => {
+    if (areaHeight <= 0) return [];
 
-  const tiles = [...preSeeded, ...incoming];
+    // 12 pre-seeded tiles scattered across the screen at mount — immediate visual density
+    const preSeeded: TileConfig[] = Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      letter: LETTERS[Math.floor(Math.random() * LETTERS.length)],
+      startX: Math.random() * (SCREEN_WIDTH - 60),
+      delay: 0,
+      duration: 10000 + Math.random() * 8000,
+      size: 40 + Math.random() * 20,
+      seedY: Math.random() * areaHeight * 0.85,
+    }));
+
+    // 8 incoming tiles with tight stagger to fill gaps without bunching
+    const incoming: TileConfig[] = Array.from({ length: 8 }, (_, i) => ({
+      id: 12 + i,
+      letter: LETTERS[Math.floor(Math.random() * LETTERS.length)],
+      startX: Math.random() * (SCREEN_WIDTH - 60),
+      delay: 500 + Math.random() * 5000, // 0.5–5.5 s stagger
+      duration: 10000 + Math.random() * 8000,
+      size: 40 + Math.random() * 20,
+      seedY: -1,
+    }));
+
+    return [...preSeeded, ...incoming];
+    // Regenerate only when we go from "not yet measured" to "measured" —
+    // small later layout wobbles shouldn't restart every tile's animation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [areaHeight > 0]);
 
   return (
-    <View style={styles.container} pointerEvents="none">
+    <View
+      style={styles.container}
+      pointerEvents="none"
+      onLayout={(e: LayoutChangeEvent) => {
+        const h = e.nativeEvent.layout.height;
+        if (h > 0 && areaHeight === 0) setAreaHeight(h);
+      }}
+    >
       {tiles.map((tile) => (
-        <FallingTile key={tile.id} tile={tile} />
+        <FallingTile key={tile.id} tile={tile} areaHeight={areaHeight} />
       ))}
     </View>
   );

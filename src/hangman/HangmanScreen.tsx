@@ -126,7 +126,10 @@ const styles = StyleSheet.create({
   categoryCardText: { fontSize: 16, fontWeight: 'bold', textAlign: 'left' },
   statsContainer: { paddingHorizontal: 20, paddingTop: 15, paddingBottom: 40 },
   tabStripWrapper: { flex: 1, overflow: 'hidden', alignItems: 'flex-start' },
-  tabStrip: { width: width * 2, flexDirection: 'row', alignSelf: 'flex-start' },
+  // flex:1 is required here — without it this row has no definite height for
+  // its ScrollView children to stretch into, so content gets clipped by the
+  // overflow:hidden wrapper before it reaches the true screen bottom.
+  tabStrip: { flex: 1, width: width * 2, flexDirection: 'row', alignSelf: 'flex-start' },
   statsSectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
   statsCard: { width: '48%', padding: 15, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
