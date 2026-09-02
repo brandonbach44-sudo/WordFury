@@ -163,6 +163,25 @@ function selectionMatchesWord(selection: Cell[], wordCells: Cell[]): boolean {
   return fwd || rev;
 }
 
+/**
+ * Check if a selection spells out a target word by its LETTERS (forward or
+ * backward), independent of where that word was actually placed.
+ *
+ * Word lists sometimes contain a short word (like "PHO") that also turns up
+ * by coincidence somewhere else in the grid, made up of other words' letters
+ * and filler. selectionMatchesWord alone only accepts the one spot the
+ * generator placed the word at, so tracing that coincidental second "PHO"
+ * read as "not a match" even though it's really spelled out on the board —
+ * confusing and, from the player's side, just wrong. Word search games
+ * conventionally accept any straight line that spells the word, so this
+ * checks the letters actually under the selection against the word text.
+ */
+function selectionSpellsWord(selection: Cell[], grid: string[][], word: string): boolean {
+  if (selection.length !== word.length) return false;
+  const letters = selection.map(c => grid[c.row]?.[c.col] ?? '').join('');
+  return letters === word || letters === [...word].reverse().join('');
+}
+
 // Padding inside the grid container — must stay in sync with styles.gridContainer
 const GRID_PADDING = 8;
 
@@ -435,7 +454,16 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
         for (const placedWord of puzzleData.words) {
           if (state.foundWords.some(fw => fw.word === placedWord.word)) continue;
           const wordCells = getWordCells(placedWord);
-          if (selectionMatchesWord(line, wordCells)) {
+          // Highlight whichever cells actually spell the word: the generator's
+          // placement when the selection matches it exactly, or the player's
+          // own selection when it's a coincidental match elsewhere in the grid —
+          // never highlight cells the player didn't actually select.
+          const matchedCells = selectionMatchesWord(line, wordCells)
+            ? wordCells
+            : selectionSpellsWord(line, puzzleData.grid, placedWord.word)
+            ? line
+            : null;
+          if (matchedCells) {
             const dc = DIFFICULTY_CONFIG[difficulty as keyof typeof DIFFICULTY_CONFIG];
             const diffMult = dc?.multiplier ?? 1;
 
@@ -463,7 +491,7 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
             }
 
             const newFoundWords = [...state.foundWords, placedWord];
-            const newFoundCells = [...state.foundCells, ...wordCells];
+            const newFoundCells = [...state.foundCells, ...matchedCells];
             wordFound = true;
 
             setGameState(prev => ({
