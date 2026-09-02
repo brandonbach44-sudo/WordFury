@@ -19,6 +19,7 @@ import { useTheme } from '../../shared/ThemeContext';
 import { HapticManager } from '../../shared/HapticManager';
 import { recordRejectedWord } from '../../shared/wordReports';
 import { AchievementPopup } from '../../shared/AchievementPopup';
+import { WordReportPrompt } from '../../shared/WordReportPrompt';
 import { maybeRequestReview } from '../../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyReminders';
 import HexGrid, { type Feedback } from '../components/HexGrid';
@@ -642,6 +643,8 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
                 <Text style={styles.shareButtonText}>Share Result</Text>
               </View>
             </Pressable>
+
+            <WordReportPrompt />
           </View>
           </ScrollView>
           <AchievementPopup
@@ -708,6 +711,8 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
                 <Text style={styles.shareButtonText}>Share Result</Text>
               </View>
             </Pressable>
+
+            <WordReportPrompt />
           </View>
           </ScrollView>
           <AchievementPopup

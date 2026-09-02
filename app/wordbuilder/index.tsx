@@ -27,6 +27,7 @@ import { Flame, RotateCw, Share2, Trophy, X } from 'lucide-react-native';
 import { GameTile } from '../../src/wordbuilder/components/GameTile';
 import { CustomizeScreen } from '../../src/wordbuilder/components/CustomizeScreen';
 import { AchievementPopup } from '../../src/shared/AchievementPopup';
+import { WordReportPrompt } from '../../src/shared/WordReportPrompt';
 import { FallingLetters } from '../../src/shared/FallingLetters';
 import DailyCalendar, { type CalendarHistory } from '../../src/shared/DailyCalendar';
 
@@ -1062,10 +1063,12 @@ export default function WordBuilder() {
                   </>
                 )}
 
+                <WordReportPrompt />
+
               </View>
             </ScrollView>
           </View>
-          
+
           {/* ===== PAGE 2: ALL WORDS ===== */}
           <View style={[styles.carouselPage, { width }]}>
             <Text style={[styles.wordsPageTitle, dynamicStyles.text]}>

@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../../shared/ThemeContext';
 import { AchievementPopup, AchievementLike } from '../../shared/AchievementPopup';
+import { WordReportPrompt } from '../../shared/WordReportPrompt';
 import { getGolfTerm } from '../utils/golfTerms';
 
 type Props = {
@@ -256,6 +257,8 @@ const LadderResultOverlay: React.FC<Props> = ({
             <Text style={styles.shareButtonText}>Share Result</Text>
           </View>
         </Pressable>
+
+        <WordReportPrompt />
       </View>
       </ScrollView>
       <AchievementPopup

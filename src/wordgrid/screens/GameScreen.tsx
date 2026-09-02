@@ -25,6 +25,7 @@ import { COLORS } from '../../shared/theme';
 import { maybeRequestReview } from '../../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyReminders';
 import { AchievementPopup } from '../../shared/AchievementPopup';
+import { WordReportPrompt } from '../../shared/WordReportPrompt';
 import { FallingLetters } from '../../shared/FallingLetters';
 import GridWithGesture from '../components/GridWithGesture';
 import { FeedbackOverlay } from './FeedbackOverlay';
@@ -779,6 +780,7 @@ export default function GameScreen() {
                   </>
                 )}
 
+                <WordReportPrompt />
               </View>
             </ScrollView>
           </View>

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "../../shared/ThemeContext";
 import { AchievementPopup, AchievementLike } from "../../shared/AchievementPopup";
+import { WordReportPrompt } from "../../shared/WordReportPrompt";
 
 type CellState = "correct" | "present" | "absent" | "empty";
 
@@ -457,6 +458,8 @@ const WordleResultOverlay = ({
             </View>
           </Pressable>
         )}
+
+        <WordReportPrompt />
       </View>
       </ScrollView>
       <AchievementPopup
