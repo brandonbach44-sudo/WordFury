@@ -95,7 +95,7 @@ const GAMES = [
   },
   {
     name: 'Hex Hive',
-    description: 'Find words using the hexagon letters — every word needs the center letter',
+    description: 'Find words hidden among the hexagon letters',
     route: '/hexhive',
     accentColor: GAME_ACCENTS.hexhive,
     bgColor: '#FBF1DA',
@@ -157,6 +157,13 @@ interface HomeDialog {
 export default function Home() {
   const { background, colorBlindMode } = useTheme();
   const [showSplash, setShowSplash] = useState(true);
+  // Measured directly and locked in on first layout rather than trusting
+  // flex:1 alone. The game-menu screens had the exact same scrollable area
+  // sometimes settle a bit short of the true available height, leaving
+  // content stuck below an invisible line with plain background beneath it
+  // until a scroll gesture forced a re-measure. Locking the real number in
+  // removes that gap here too.
+  const [scrollAreaHeight, setScrollAreaHeight] = useState(0);
   const [ritual, setRitual] = useState<DailyRitualSummary | null>(null);
   const resetsIn = useCountdownToMidnight();
 
@@ -393,7 +400,14 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.gamesContainer}>
+        <ScrollView
+          style={[styles.scrollView, scrollAreaHeight ? { flex: undefined, height: scrollAreaHeight } : null]}
+          contentContainerStyle={styles.gamesContainer}
+          onLayout={(e) => {
+            const h = e.nativeEvent.layout.height;
+            if (h > 0 && Math.abs(h - scrollAreaHeight) > 1) setScrollAreaHeight(h);
+          }}
+        >
           {/* ── TODAY CARD ──────────────────────────────────────────────────────
               The fraction is the headline, not the streak: "how many are left
               today" is the question a returning player actually has, and seeing
@@ -538,7 +552,10 @@ export default function Home() {
                     <Text style={[styles.gameName, { color: colors.textColor }]}>
                       {game.name}
                     </Text>
-                    <Text style={[styles.gameDesc, { color: colors.descColor }]}>
+                    <Text
+                      style={[styles.gameDesc, { color: colors.descColor }]}
+                      numberOfLines={2}
+                    >
                       {game.description}
                     </Text>
                   </View>

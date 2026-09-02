@@ -86,6 +86,11 @@ export default function AnagramsEntryScreen() {
 
   const [activeTab, setActiveTab] = useState<Tab>('play');
   const tabAnim = useRef(new Animated.Value(0)).current;
+  // Measured directly instead of trusting flex propagation through the
+  // Animated.View row below. This is belt-and-suspenders after flex:1 alone
+  // did not reliably give the row (and its ScrollView pages) the full
+  // height, which was letting content sit un-scrollable-into below a fixed line.
+  const [tabAreaHeight, setTabAreaHeight] = useState(0);
   const currentTabIdxRef = useRef(0);
   const dragBase = useRef(0);
 
@@ -240,10 +245,18 @@ export default function AnagramsEntryScreen() {
         })}
       </View>
 
-      <View style={styles.tabStripWrapper} {...panResponder.panHandlers}>
+      <View
+        style={styles.tabStripWrapper}
+        {...panResponder.panHandlers}
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          if (h > 0 && Math.abs(h - tabAreaHeight) > 1) setTabAreaHeight(h);
+        }}
+      >
         <Animated.View
           style={[
             styles.tabStrip,
+            tabAreaHeight ? { height: tabAreaHeight } : null,
             { width: width * TABS.length, transform: [{ translateX: Animated.multiply(tabAnim, -width) }] },
           ]}
         >
@@ -546,7 +559,7 @@ const styles = StyleSheet.create({
   segmentButtonText: { fontSize: 14, fontWeight: '500' },
 
   tabStripWrapper: { flex: 1, overflow: 'hidden', alignItems: 'flex-start' },
-  // flex:1 is required here — without it this row has no definite height for
+  // flex:1 is required here. Without it, this row has no definite height for
   // its ScrollView children to stretch into, so content gets clipped by the
   // overflow:hidden wrapper before it reaches the true screen bottom.
   tabStrip: { flex: 1, flexDirection: 'row' },
