@@ -208,7 +208,7 @@ export default function AnagramsEntryScreen() {
     practiceStats && practiceStats.gamesPlayed > 0 ? practiceStats.totalTimeSeconds / practiceStats.gamesPlayed : null;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: background.backgroundColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: background.backgroundColor }]} edges={['top', 'left', 'right']}>
       <StatusBar barStyle={background.statusBar === 'light' ? 'light-content' : 'dark-content'} />
       <FallingLetters />
 

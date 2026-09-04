@@ -194,7 +194,7 @@ const WordSearchEntryScreen: React.FC = () => {
   const quickPlayWinRate = quickPlayGamesPlayed > 0 ? Math.round((quickPlayGamesWon / quickPlayGamesPlayed) * 100) : 0;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: background.backgroundColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: background.backgroundColor }]} edges={['top', 'left', 'right']}>
       <StatusBar barStyle={background.statusBar === 'light' ? 'light-content' : 'dark-content'} />
       <FallingLetters />
 

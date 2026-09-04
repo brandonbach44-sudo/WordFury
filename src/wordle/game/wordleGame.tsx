@@ -1709,7 +1709,7 @@ export default function WordleGame() {
   }, [dailyLock, isDailyCompletedToday]);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: BG }]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: BG }]} edges={['top', 'left', 'right']}>
       <AchievementPopup
         achievement={currentPopupAchievement as any}
         onDismiss={() => setCurrentPopupAchievement(null)}

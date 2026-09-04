@@ -953,7 +953,7 @@ export default function HangmanScreen() {
 
   // Main Menu
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: background.backgroundColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: background.backgroundColor }]} edges={['top', 'left', 'right']}>
       <StatusBar barStyle={background.statusBar === 'light' ? 'light-content' : 'dark-content'} />
       <FallingLetters />
       <AchievementPopup

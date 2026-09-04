@@ -365,7 +365,7 @@ export default function Home() {
     <View style={[styles.root, { backgroundColor: background.backgroundColor }]}>
       <FallingLetters />
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <StatusBar
           barStyle={background.statusBar === 'dark' ? 'dark-content' : 'light-content'}
         />

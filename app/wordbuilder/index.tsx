@@ -1306,7 +1306,7 @@ export default function WordBuilder() {
 
   // ==================== MAIN MENU WITH SEGMENTS ====================
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'left', 'right']}>
       <StatusBar barStyle={background.statusBar === 'light' ? 'light-content' : 'dark-content'} />
       <FallingLetters />
 

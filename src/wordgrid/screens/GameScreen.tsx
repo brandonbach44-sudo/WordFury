@@ -954,7 +954,7 @@ export default function GameScreen() {
   // MENU SCREEN
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: bg.backgroundColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: bg.backgroundColor }]} edges={['top', 'left', 'right']}>
       <StatusBar barStyle={bg.statusBar === 'dark' ? 'dark-content' : 'light-content'} />
       <FallingLetters />
 
