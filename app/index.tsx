@@ -3,6 +3,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Dimensions,
   Pressable,
   ScrollView,
   StatusBar,
@@ -11,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FallingLetters } from '../src/shared/FallingLetters';
 import { SplashScreen } from '../src/shared/SplashScreen';
 import { useTheme } from '../src/shared/ThemeContext';
@@ -156,7 +157,13 @@ interface HomeDialog {
 
 export default function Home() {
   const { background, colorBlindMode } = useTheme();
+  const insets = useSafeAreaInsets();
   const [showSplash, setShowSplash] = useState(true);
+  // TEMPORARY DIAGNOSTIC STATE. Remove once the bottom-cutoff root cause is
+  // confirmed. Measures the exact numbers involved so the next screenshot
+  // shows hard data instead of another guess.
+  const [containerHeight, setContainerHeight] = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
   // Measured directly and locked in on first layout rather than trusting
   // flex:1 alone. The game-menu screens had the exact same scrollable area
   // sometimes settle a bit short of the true available height, leaving
@@ -365,13 +372,25 @@ export default function Home() {
     <View style={[styles.root, { backgroundColor: background.backgroundColor }]}>
       <FallingLetters />
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView
+        style={styles.container}
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          if (h > 0 && Math.abs(h - containerHeight) > 1) setContainerHeight(h);
+        }}
+      >
         <StatusBar
           barStyle={background.statusBar === 'dark' ? 'dark-content' : 'light-content'}
         />
 
         {/* Header */}
-        <View style={styles.header}>
+        <View
+          style={styles.header}
+          onLayout={(e) => {
+            const h = e.nativeEvent.layout.height;
+            if (h > 0 && Math.abs(h - headerHeight) > 1) setHeaderHeight(h);
+          }}
+        >
           {/* The left slot was an empty 38px spacer balancing the settings gear.
               It's now the way into the history screen.
               A chevron on the Today card was the only entry point at first, and
@@ -595,6 +614,16 @@ export default function Home() {
         </ScrollView>
       </SafeAreaView>
 
+      {/* TEMPORARY DIAGNOSTIC OVERLAY. Remove once the bottom-cutoff root cause
+          is confirmed. Pinned to the true bottom of the root View (outside
+          the SafeAreaView), so it reads out the raw numbers no matter what
+          is happening inside the SafeAreaView/ScrollView. */}
+      <View style={styles.debugOverlay} pointerEvents="none">
+        <Text style={styles.debugText}>
+          win:{Math.round(Dimensions.get('window').height)} top:{Math.round(insets.top)} bot:{Math.round(insets.bottom)} cont:{Math.round(containerHeight)} hdr:{Math.round(headerHeight)} scroll:{Math.round(scrollAreaHeight)}
+        </Text>
+      </View>
+
       {/* ── THE ONE DIALOG ───────────────────────────────────────────────────
           Every message this screen can raise — Perfect Day, a Streak Skip
           offer, the relief after spending one, the first-skip explainer, the
@@ -637,6 +666,23 @@ export default function Home() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  debugOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FF00FF',
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    zIndex: 999,
+    elevation: 999,
+  },
+  debugText: {
+    color: '#000',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   container: {
     flex: 1,

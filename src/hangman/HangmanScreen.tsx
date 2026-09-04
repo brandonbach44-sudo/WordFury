@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../shared/ThemeContext';
 import { COLORS } from '../shared/theme';
 import { maybeRequestReview } from '../shared/reviewPrompt';
@@ -78,6 +78,23 @@ import {
 const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
+  dbgOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FF00FF',
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    zIndex: 999,
+    elevation: 999,
+  },
+  dbgText: {
+    color: '#000',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 },
   backButton: { flex: 1, alignItems: 'flex-start', padding: 8 },
@@ -264,6 +281,13 @@ function getHangmanProgress(id: string, stats: import('./utils/storage').Hangman
 
 export default function HangmanScreen() {
   const { background } = useTheme();
+  const insets = useSafeAreaInsets();
+  // TEMPORARY DIAGNOSTIC STATE. Remove once the bottom-cutoff root cause is
+  // confirmed. Measures the exact numbers involved so the next screenshot
+  // shows hard data instead of another guess.
+  const [dbgContainerHeight, setDbgContainerHeight] = useState(0);
+  const [dbgHeaderHeight, setDbgHeaderHeight] = useState(0);
+  const [dbgSegmentHeight, setDbgSegmentHeight] = useState(0);
 
   const [segment, setSegment] = useState<SegmentKey>('play');
   const SEGMENT_KEYS: SegmentKey[] = ['play', 'stats'];
@@ -953,7 +977,13 @@ export default function HangmanScreen() {
 
   // Main Menu
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: background.backgroundColor }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: background.backgroundColor }]}
+      onLayout={(e) => {
+        const h = e.nativeEvent.layout.height;
+        if (h > 0 && Math.abs(h - dbgContainerHeight) > 1) setDbgContainerHeight(h);
+      }}
+    >
       <StatusBar barStyle={background.statusBar === 'light' ? 'light-content' : 'dark-content'} />
       <FallingLetters />
       <AchievementPopup
@@ -962,7 +992,13 @@ export default function HangmanScreen() {
         backgroundColor={background.cardColor}
         textColor={background.textColor}
       />
-      <View style={styles.header}>
+      <View
+        style={styles.header}
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          if (h > 0 && Math.abs(h - dbgHeaderHeight) > 1) setDbgHeaderHeight(h);
+        }}
+      >
         <TouchableOpacity style={styles.backButton} onPress={handleBackToMenu}>
           <Text style={[styles.backButtonText, { color: background.secondaryText }]}>
             ← Games
@@ -971,7 +1007,13 @@ export default function HangmanScreen() {
         <Text style={[styles.title, { color: background.textColor }]}>Hangman</Text>
         <View style={styles.headerPlaceholder} />
       </View>
-      <View style={[styles.segmentSwitcher, { backgroundColor: background.cardColor }]}>
+      <View
+        style={[styles.segmentSwitcher, { backgroundColor: background.cardColor }]}
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          if (h > 0 && Math.abs(h - dbgSegmentHeight) > 1) setDbgSegmentHeight(h);
+        }}
+      >
         {(['play', 'stats'] as SegmentKey[]).map((key) => {
           const isActive = key === segment;
           const label = key === 'play' ? 'Play' : 'Stats';
@@ -1399,6 +1441,14 @@ export default function HangmanScreen() {
           onClose={() => setShowDailyPopup(false)}
         />
       )}
+
+      {/* TEMPORARY DIAGNOSTIC OVERLAY. Remove once the bottom-cutoff root
+          cause is confirmed. */}
+      <View style={styles.dbgOverlay} pointerEvents="none">
+        <Text style={styles.dbgText}>
+          win:{Math.round(Dimensions.get('window').height)} top:{Math.round(insets.top)} bot:{Math.round(insets.bottom)} cont:{Math.round(dbgContainerHeight)} hdr:{Math.round(dbgHeaderHeight)} seg:{Math.round(dbgSegmentHeight)} tab:{Math.round(tabAreaHeight)}
+        </Text>
+      </View>
     </SafeAreaView>
   );
 }
