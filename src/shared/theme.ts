@@ -122,6 +122,57 @@ export const COLOR_BACKGROUNDS: BackgroundOption[] = [
     statusBar: 'dark',
     isDark: false,
   },
+  // The three below are a deliberate set: a deeper, more saturated register
+  // than the six above them. #b6d0e2 came in as a tester request by exact hex,
+  // and it sits around 80% lightness where the older six sit at 89 to 100%, so
+  // rather than leave one odd swatch out on its own, Blush and Periwinkle were
+  // built at the same lightness and saturation. That fills the settings grid to
+  // a clean 3 rows of 3, with the pale tints on rows 1 and 2 and these on row 3.
+  //
+  // Hues were picked to stay clear of what already exists (Sage sits at 120 and
+  // Lavender at 278) and to stay clear of the app's green accent, which is why
+  // there is no mint or teal here: a green accent on a green background reads as
+  // broken no matter how the contrast numbers come out. Text and secondary text
+  // were checked against each background for WCAG contrast and land inside the
+  // same range the older six already ship (text 9.6:1 and up, secondary 4.9:1
+  // and up), and the white cards read as more defined against these than against
+  // the pale tints, not less.
+  {
+    id: 'powderblue',
+    name: 'Powder Blue',
+    type: 'color',
+    backgroundColor: '#b6d0e2',
+    textColor: '#112431',
+    secondaryText: '#3c5568',
+    cardColor: '#ffffff',
+    borderColor: '#7ba3c0',
+    statusBar: 'dark',
+    isDark: false,
+  },
+  {
+    id: 'blush',
+    name: 'Blush',
+    type: 'color',
+    backgroundColor: '#e0b8be',
+    textColor: '#311117',
+    secondaryText: '#683c43',
+    cardColor: '#ffffff',
+    borderColor: '#c48892',
+    statusBar: 'dark',
+    isDark: false,
+  },
+  {
+    id: 'periwinkle',
+    name: 'Periwinkle',
+    type: 'color',
+    backgroundColor: '#bebbe2',
+    textColor: '#141131',
+    secondaryText: '#3f3c68',
+    cardColor: '#ffffff',
+    borderColor: '#8b85c4',
+    statusBar: 'dark',
+    isDark: false,
+  },
   {
     id: 'dark',
     name: 'Dark Mode',
