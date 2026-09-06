@@ -80,7 +80,7 @@ const StatPill = ({
 }) => (
   <View style={[styles.statPill, { borderColor, backgroundColor }]}>
     <Text style={[styles.statPillLabel, { color: textColor }]}>{label}</Text>
-    <Text style={[styles.statPillValue, { color: textColor }]}>{value}</Text>
+    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: textColor }]}>{value}</Text>
   </View>
 );
 
@@ -804,9 +804,9 @@ const styles = StyleSheet.create({
   divider: { height: 1, marginVertical: 12, opacity: 0.35 },
   sectionTitle: { fontSize: 14, fontWeight: '900', marginBottom: 8, textAlign: 'center', letterSpacing: 1 },
   statsRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 },
-  statPill: { borderWidth: 2, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12, minWidth: 100, alignItems: 'center' },
+  statPill: { borderWidth: 2, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12, minWidth: 100, alignItems: 'center', justifyContent: 'center' },
   statPillLabel: { fontSize: 11, fontWeight: '800', opacity: 0.8, marginBottom: 2 },
-  statPillValue: { fontSize: 14, fontWeight: '900' },
+  statPillValue: { fontSize: 14, fontWeight: '900', textAlign: 'center' },
   buttonRow: { flexDirection: 'row', justifyContent: 'center', width: '100%', gap: 10, marginTop: 24 },
   primaryButton: { borderWidth: 2, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, minWidth: 120, alignItems: 'center' },
   primaryButtonText: { fontSize: 13, fontWeight: '900', letterSpacing: 1 },

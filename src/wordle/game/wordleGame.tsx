@@ -424,7 +424,7 @@ const StatsCard = ({
         { backgroundColor: cardColor, borderColor },
       ]}
     >
-      <Text style={[styles.statsValue, { color: textColor }]}>{value}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statsValue, { color: textColor }]}>{value}</Text>
       <Text style={[styles.statsLabel, { color: secondaryText }]}>{label}</Text>
     </View>
   );
@@ -1816,14 +1816,14 @@ export default function WordleGame() {
                       <Text style={[styles.wbStatPillLabel, { color: SUBTEXT }]}>Current streak</Text>
                       <View style={styles.wbStatPillValueRow}>
                         <Flame size={18} color="#e85d04" />
-                        <Text style={[styles.wbStatPillValue, { color: TEXT }]}>{stats.daily.currentStreak}</Text>
+                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.wbStatPillValue, { color: TEXT }]}>{stats.daily.currentStreak}</Text>
                       </View>
                     </View>
                     <View style={[styles.wbStatPill, { backgroundColor: "#f3e7d7" }]}>
                       <Text style={[styles.wbStatPillLabel, { color: SUBTEXT }]}>Best streak</Text>
                       <View style={styles.wbStatPillValueRow}>
                         <Trophy size={18} color="#d4a017" />
-                        <Text style={[styles.wbStatPillValue, { color: TEXT }]}>{stats.daily.bestStreak}</Text>
+                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.wbStatPillValue, { color: TEXT }]}>{stats.daily.bestStreak}</Text>
                       </View>
                     </View>
                   </View>
@@ -2141,15 +2141,15 @@ export default function WordleGame() {
                 {/* Streak highlight row */}
                 <View style={styles.streakRow}>
                   <View style={[styles.streakBox, { backgroundColor: CARD, borderColor: BORDER }]}>
-                    <Text style={[styles.streakNum, { color: TEXT }]}>{stats.daily.currentStreak}</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.streakNum, { color: TEXT }]}>{stats.daily.currentStreak}</Text>
                     <Text style={[styles.streakLbl, { color: SUBTEXT }]}>Current Streak</Text>
                   </View>
                   <View style={[styles.streakBox, { backgroundColor: CARD, borderColor: BORDER }]}>
-                    <Text style={[styles.streakNum, { color: TEXT }]}>{stats.daily.bestStreak}</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.streakNum, { color: TEXT }]}>{stats.daily.bestStreak}</Text>
                     <Text style={[styles.streakLbl, { color: SUBTEXT }]}>Best Streak</Text>
                   </View>
                   <View style={[styles.streakBox, { backgroundColor: CARD, borderColor: BORDER }]}>
-                    <Text style={[styles.streakNum, { color: "#22c55e" }]}>{winRateDaily}%</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.streakNum, { color: "#22c55e" }]}>{winRateDaily}%</Text>
                     <Text style={[styles.streakLbl, { color: SUBTEXT }]}>Win Rate</Text>
                   </View>
                 </View>
@@ -2578,6 +2578,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3e7d7",
     minWidth: 100,
     alignItems: "center",
+    justifyContent: "center",
   },
   wbStatPillHighlight: {
     backgroundColor: "rgba(78, 204, 163, 0.15)",
@@ -2594,6 +2595,7 @@ const styles = StyleSheet.create({
   wbStatPillValue: {
     fontSize: 18,
     fontWeight: "600",
+    textAlign: "center",
   },
   wbDailyButton: {
     borderRadius: 12,
@@ -2702,6 +2704,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     marginBottom: 10,
+    justifyContent: "center",
   },
   statsCardWide: {
     width: "100%",
@@ -2728,10 +2731,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 12,
     alignItems: "center",
+    justifyContent: "center",
   },
   streakNum: {
     fontSize: 28,
     fontWeight: "900",
+    textAlign: "center",
   },
   streakLbl: {
     fontSize: 11,
@@ -2841,6 +2846,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     marginBottom: 10,
+    justifyContent: "center",
   },
   achievementEmoji: {
     fontSize: 32,
@@ -3101,6 +3107,7 @@ const styles = StyleSheet.create({
     color: "#4ecca3",
     fontSize: 28,
     fontWeight: "bold",
+    textAlign: "center",
   },
   skinSectionTitle: {
     fontSize: 14,

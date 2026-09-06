@@ -116,7 +116,7 @@ const StatsCard = ({
     wide && styles.statsCardWide,
     { backgroundColor: cardColor, borderColor }
   ]}>
-    <Text style={[styles.statsValue, { color: textColor }]}>{value}</Text>
+    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statsValue, { color: textColor }]}>{value}</Text>
     <Text style={[styles.statsLabel, { color: secondaryText }]}>{label}</Text>
   </View>
 );
@@ -1036,17 +1036,17 @@ export default function WordBuilder() {
                 <View style={styles.statsRow}>
                   <View style={[styles.statPill, { borderColor: background.borderColor, backgroundColor: background.backgroundColor }]}>
                     <Text style={[styles.statPillLabel, { color: background.textColor }]}>Found</Text>
-                    <Text style={[styles.statPillValue, { color: background.textColor }]}>{stats.totalFound}</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: background.textColor }]}>{stats.totalFound}</Text>
                   </View>
                   <View style={[styles.statPill, { borderColor: background.borderColor, backgroundColor: background.backgroundColor }]}>
                     <Text style={[styles.statPillLabel, { color: background.textColor }]}>Possible</Text>
-                    <Text style={[styles.statPillValue, { color: background.textColor }]}>{stats.totalPossible}</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: background.textColor }]}>{stats.totalPossible}</Text>
                   </View>
                 </View>
                 <View style={styles.statsRow}>
                   <View style={[styles.statPill, { borderColor: background.borderColor, backgroundColor: background.backgroundColor }]}>
                     <Text style={[styles.statPillLabel, { color: background.textColor }]}>Completion</Text>
-                    <Text style={[styles.statPillValue, { color: COLORS.accent }]}>{stats.percentFound}%</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: COLORS.accent }]}>{stats.percentFound}%</Text>
                   </View>
                 </View>
 
@@ -1058,11 +1058,11 @@ export default function WordBuilder() {
                     <View style={styles.statsRow}>
                       <View style={[styles.statPill, { borderColor: background.borderColor, backgroundColor: background.backgroundColor }]}>
                         <Text style={[styles.statPillLabel, { color: background.textColor }]}>Streak</Text>
-                        <Text style={[styles.statPillValue, { color: background.textColor }]}>{dailyChallenge.dailyStreak}</Text>
+                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: background.textColor }]}>{dailyChallenge.dailyStreak}</Text>
                       </View>
                       <View style={[styles.statPill, { borderColor: background.borderColor, backgroundColor: background.backgroundColor }]}>
                         <Text style={[styles.statPillLabel, { color: background.textColor }]}>Best</Text>
-                        <Text style={[styles.statPillValue, { color: background.textColor }]}>{dailyChallenge.bestDailyStreak}</Text>
+                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: background.textColor }]}>{dailyChallenge.bestDailyStreak}</Text>
                       </View>
                     </View>
                   </>
@@ -1848,11 +1848,11 @@ export default function WordBuilder() {
             <View style={styles.modalStatsRow}>
               <View style={[styles.modalStatPill, { borderColor: background.borderColor, backgroundColor: background.cardColor }]}>
                 <Text style={[styles.modalStatPillLabel, { color: background.textColor }]}>Streak</Text>
-                <Text style={[styles.modalStatPillValue, { color: background.textColor }]}>{dailyChallenge?.dailyStreak ?? 0}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.modalStatPillValue, { color: background.textColor }]}>{dailyChallenge?.dailyStreak ?? 0}</Text>
               </View>
               <View style={[styles.modalStatPill, { borderColor: background.borderColor, backgroundColor: background.cardColor }]}>
                 <Text style={[styles.modalStatPillLabel, { color: background.textColor }]}>Best</Text>
-                <Text style={[styles.modalStatPillValue, { color: background.textColor }]}>{dailyChallenge?.bestDailyStreak ?? 0}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.modalStatPillValue, { color: background.textColor }]}>{dailyChallenge?.bestDailyStreak ?? 0}</Text>
               </View>
             </View>
 
@@ -2004,6 +2004,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3e7d7',
     minWidth: 100,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   dailyStatPillHighlight: {
     backgroundColor: 'rgba(78, 204, 163, 0.15)',
@@ -2021,6 +2022,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#2c2416',
+    textAlign: 'center',
   },
   // Daily action row (View Results + Share)
   dailyActionRow: {
@@ -2072,9 +2074,9 @@ const styles = StyleSheet.create({
   modalDividerLine: { height: 1, marginVertical: 12, opacity: 0.35 },
   modalSectionTitle: { fontSize: 14, fontWeight: '900', marginBottom: 8, textAlign: 'center', letterSpacing: 1 },
   modalStatsRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 },
-  modalStatPill: { borderWidth: 2, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12, minWidth: 120, alignItems: 'center' },
+  modalStatPill: { borderWidth: 2, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12, minWidth: 120, alignItems: 'center', justifyContent: 'center' },
   modalStatPillLabel: { fontSize: 11, fontWeight: '800', opacity: 0.8, marginBottom: 2 },
-  modalStatPillValue: { fontSize: 14, fontWeight: '900' },
+  modalStatPillValue: { fontSize: 14, fontWeight: '900', textAlign: 'center' },
   modalCountdownLabel: { textAlign: 'center', fontSize: 12, fontWeight: '800', marginBottom: 4, letterSpacing: 1 },
   modalCountdownValue: { textAlign: 'center', fontSize: 18, fontWeight: '900', letterSpacing: 1, marginBottom: 4 },
   modalButtonRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 24 },
@@ -2213,6 +2215,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   statsCardWide: {
     width: '100%',
@@ -2221,6 +2224,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 4,
+    textAlign: 'center',
   },
   statsLabel: {
     fontSize: 12,
@@ -2244,6 +2248,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   achievementEmoji: {
     fontSize: 32,
@@ -2566,6 +2571,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     minWidth: 120,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   statPillLabel: {
     fontSize: 11,
@@ -2576,6 +2582,7 @@ const styles = StyleSheet.create({
   statPillValue: {
     fontSize: 14,
     fontWeight: '900',
+    textAlign: 'center',
   },
   resultsButtonRow: {
     flexDirection: 'row',

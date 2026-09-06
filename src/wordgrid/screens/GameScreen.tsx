@@ -101,7 +101,7 @@ const StatsCard = ({
     wide && styles.statsCardWide,
     { backgroundColor: cardColor, borderColor },
   ]}>
-    <Text style={[styles.statsValue, { color: textColor }]}>{value}</Text>
+    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statsValue, { color: textColor }]}>{value}</Text>
     <Text style={[styles.statsLabel, { color: secondaryText }]}>{label}</Text>
   </View>
 );
@@ -712,21 +712,21 @@ export default function GameScreen() {
                 <View style={styles.statsRow}>
                   <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
                     <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Words</Text>
-                    <Text style={[styles.statPillValue, { color: bg.textColor }]}>{foundWords.length}</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{foundWords.length}</Text>
                   </View>
                   <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
                     <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Score</Text>
-                    <Text style={[styles.statPillValue, { color: COLORS.accent }]}>{score}</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: COLORS.accent }]}>{score}</Text>
                   </View>
                 </View>
                 <View style={styles.statsRow}>
                   <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
                     <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Best Length</Text>
-                    <Text style={[styles.statPillValue, { color: bg.textColor }]}>{bestLen}</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{bestLen}</Text>
                   </View>
                   <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
                     <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Best Word</Text>
-                    <Text style={[styles.statPillValue, { color: bg.textColor }]}>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>
                       {topWordEntry ? `${topWordEntry.word.toUpperCase()} (${topWordEntry.points})` : '—'}
                     </Text>
                   </View>
@@ -740,21 +740,21 @@ export default function GameScreen() {
                     <View style={styles.statsRow}>
                       <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
                         <Text style={[styles.statPillLabel, { color: bg.textColor }]}>High Score</Text>
-                        <Text style={[styles.statPillValue, { color: bg.textColor }]}>{stats.highScore.toLocaleString()}</Text>
+                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{stats.highScore.toLocaleString()}</Text>
                       </View>
                       <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
                         <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Games</Text>
-                        <Text style={[styles.statPillValue, { color: bg.textColor }]}>{stats.gamesPlayed}</Text>
+                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{stats.gamesPlayed}</Text>
                       </View>
                     </View>
                     <View style={styles.statsRow}>
                       <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
                         <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Total Words</Text>
-                        <Text style={[styles.statPillValue, { color: bg.textColor }]}>{stats.totalWordsFound.toLocaleString()}</Text>
+                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{stats.totalWordsFound.toLocaleString()}</Text>
                       </View>
                       <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
                         <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Best/Game</Text>
-                        <Text style={[styles.statPillValue, { color: bg.textColor }]}>{stats.bestWordsInGame}</Text>
+                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{stats.bestWordsInGame}</Text>
                       </View>
                     </View>
                   </>
@@ -768,18 +768,18 @@ export default function GameScreen() {
                     <View style={styles.statsRow}>
                       <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
                         <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Current</Text>
-                        <Text style={[styles.statPillValue, { color: bg.textColor }]}>{dailyStats.streak ?? 0}</Text>
+                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{dailyStats.streak ?? 0}</Text>
                       </View>
                       <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
                         <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Best</Text>
-                        <Text style={[styles.statPillValue, { color: bg.textColor }]}>{dailyStats.bestStreak ?? 0}</Text>
+                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{dailyStats.bestStreak ?? 0}</Text>
                       </View>
                     </View>
                     <View style={[styles.resultsDivider, { backgroundColor: bg.borderColor }]} />
                     <Text style={[styles.statPillLabel, { color: bg.secondaryText, textAlign: 'center', letterSpacing: 1 }]}>
                       NEXT DAILY IN
                     </Text>
-                    <Text style={[styles.statPillValue, { color: bg.textColor, textAlign: 'center', fontSize: 20, marginTop: 4 }]}>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor, textAlign: 'center', fontSize: 20, marginTop: 4 }]}>
                       {dailyCountdown}
                     </Text>
                   </>
@@ -1294,9 +1294,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   statsCardWide: { width: '100%' },
-  statsValue: { fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
+  statsValue: { fontSize: 20, fontWeight: 'bold', marginBottom: 4, textAlign: 'center' },
   statsLabel: { fontSize: 12, textAlign: 'center' },
   loadingText: { fontSize: 16, textAlign: 'center', marginTop: 20 },
 
@@ -1312,6 +1313,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   achievementCardLocked: { opacity: 0.5 },
   achievementEmoji: { fontSize: 32, marginBottom: 6 },
@@ -1414,9 +1416,9 @@ const styles = StyleSheet.create({
   gameOverTitle: { textAlign: 'center', fontSize: 22, fontWeight: '900', marginBottom: 4 },
   gameOverSubtitle: { textAlign: 'center', fontSize: 14, fontWeight: '600', marginBottom: 4 },
   statsRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 },
-  statPill: { borderWidth: 2, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12, minWidth: 120, alignItems: 'center' },
+  statPill: { borderWidth: 2, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12, minWidth: 120, alignItems: 'center', justifyContent: 'center' },
   statPillLabel: { fontSize: 11, fontWeight: '800', opacity: 0.8, marginBottom: 2 },
-  statPillValue: { fontSize: 14, fontWeight: '900' },
+  statPillValue: { fontSize: 14, fontWeight: '900', textAlign: 'center' },
   buttonRow: { flexDirection: 'row', justifyContent: 'center', width: '100%', paddingHorizontal: 26, gap: 10, marginTop: 24 },
   primaryButton: { borderWidth: 2, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, minWidth: 120, alignItems: 'center' },
   primaryButtonFullWidth: { width: '100%', paddingVertical: 12, minWidth: undefined },

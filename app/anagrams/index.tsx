@@ -399,15 +399,15 @@ export default function AnagramsEntryScreen() {
                 {/* Streak highlight row */}
                 <View style={styles.streakRow}>
                   <View style={[styles.streakBox, { backgroundColor: background.cardColor, borderColor: background.borderColor }]}>
-                    <Text style={[styles.streakNum, { color: background.textColor }]}>{stats?.daily.currentStreak ?? 0}</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.streakNum, { color: background.textColor }]}>{stats?.daily.currentStreak ?? 0}</Text>
                     <Text style={[styles.streakLbl, { color: background.secondaryText }]}>Current Streak</Text>
                   </View>
                   <View style={[styles.streakBox, { backgroundColor: background.cardColor, borderColor: background.borderColor }]}>
-                    <Text style={[styles.streakNum, { color: background.textColor }]}>{stats?.daily.bestStreak ?? 0}</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.streakNum, { color: background.textColor }]}>{stats?.daily.bestStreak ?? 0}</Text>
                     <Text style={[styles.streakLbl, { color: background.secondaryText }]}>Best Streak</Text>
                   </View>
                   <View style={[styles.streakBox, { backgroundColor: background.cardColor, borderColor: background.borderColor }]}>
-                    <Text style={[styles.streakNum, { color: '#22c55e' }]}>{dailyWinRate}%</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.streakNum, { color: '#22c55e' }]}>{dailyWinRate}%</Text>
                     <Text style={[styles.streakLbl, { color: background.secondaryText }]}>Win Rate</Text>
                   </View>
                 </View>
@@ -425,7 +425,7 @@ export default function AnagramsEntryScreen() {
                     { label: 'Fastest Perfect', value: stats?.daily.fastestPerfectTimeSeconds != null ? formatSeconds(stats.daily.fastestPerfectTimeSeconds) : '--' },
                   ].map(({ label, value }) => (
                     <View key={label} style={[styles.statsCard, { backgroundColor: background.cardColor, borderColor: background.borderColor }]}>
-                      <Text style={[styles.statsValue, { color: background.textColor }]}>{value}</Text>
+                      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statsValue, { color: background.textColor }]}>{value}</Text>
                       <Text style={[styles.statsLabel, { color: background.secondaryText }]}>{label}</Text>
                     </View>
                   ))}
@@ -457,7 +457,7 @@ export default function AnagramsEntryScreen() {
                     { label: 'Fastest Perfect', value: practiceStats?.fastestPerfectTimeSeconds != null ? formatSeconds(practiceStats.fastestPerfectTimeSeconds) : '--' },
                   ].map(({ label, value }) => (
                     <View key={label} style={[styles.statsCard, { backgroundColor: background.cardColor, borderColor: background.borderColor }]}>
-                      <Text style={[styles.statsValue, { color: background.textColor }]}>{value}</Text>
+                      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statsValue, { color: background.textColor }]}>{value}</Text>
                       <Text style={[styles.statsLabel, { color: background.secondaryText }]}>{label}</Text>
                     </View>
                   ))}
@@ -572,11 +572,11 @@ const styles = StyleSheet.create({
   dailyCompletedScore: { fontSize: 48, fontWeight: 'bold', color: COLORS.accent },
   dailyCompletedLabel: { fontSize: 14, marginTop: 4, marginBottom: 8 },
   dailyStatPillRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 16 },
-  dailyStatPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: '#f3e7d7', minWidth: 100, alignItems: 'center' },
+  dailyStatPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: '#f3e7d7', minWidth: 100, alignItems: 'center', justifyContent: 'center' },
   dailyStatPillHighlight: { backgroundColor: 'rgba(78, 204, 163, 0.15)' },
   dailyStatPillLabel: { fontSize: 11, marginBottom: 2 },
   dailyStatPillValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dailyStatPillValue: { fontSize: 18, fontWeight: '600', color: '#2c2416' },
+  dailyStatPillValue: { fontSize: 18, fontWeight: '600', color: '#2c2416', textAlign: 'center' },
   dailyButton: { borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   dailyButtonText: { fontSize: 16, fontWeight: '600' },
   dailyActionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
@@ -602,18 +602,18 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 12 },
 
   streakRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  streakBox: { flex: 1, borderRadius: 12, borderWidth: 1, padding: 12, alignItems: 'center' },
-  streakNum: { fontSize: 28, fontWeight: '900' },
+  streakBox: { flex: 1, borderRadius: 12, borderWidth: 1, padding: 12, alignItems: 'center', justifyContent: 'center' },
+  streakNum: { fontSize: 28, fontWeight: '900', textAlign: 'center' },
   streakLbl: { fontSize: 11, textAlign: 'center', marginTop: 2 },
 
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
-  statsCard: { width: '48%', borderRadius: 12, borderWidth: 1, padding: 15, alignItems: 'center' },
-  statsValue: { fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
+  statsCard: { width: '48%', borderRadius: 12, borderWidth: 1, padding: 15, alignItems: 'center', justifyContent: 'center' },
+  statsValue: { fontSize: 20, fontWeight: 'bold', marginBottom: 4, textAlign: 'center' },
   statsLabel: { fontSize: 12, textAlign: 'center' },
   emptyText: { fontSize: 14, marginTop: 8 },
 
   achievementsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  achievementCard: { width: '48%', padding: 12, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
+  achievementCard: { width: '48%', padding: 12, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   achievementEmoji: { fontSize: 32, marginBottom: 6 },
   achievementEmojiLocked: { opacity: 0.5 },
   achievementName: { fontSize: 14, fontWeight: 'bold', textAlign: 'center', marginBottom: 2 },

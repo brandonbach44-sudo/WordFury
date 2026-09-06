@@ -100,9 +100,9 @@ const styles = StyleSheet.create({
   ruleNumber: { fontSize: 18, fontWeight: 'bold', width: 28 },
   ruleText: { fontSize: 14, flex: 1 },
   gameInfoBar: { flexDirection: 'row', marginHorizontal: 20, padding: 12, borderRadius: 12, borderWidth: 1 },
-  infoItem: { flex: 1, alignItems: 'center' },
+  infoItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   infoLabel: { fontSize: 12, marginBottom: 4 },
-  infoValue: { fontSize: 16, fontWeight: 'bold' },
+  infoValue: { fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
   infoDivider: { width: 1, marginHorizontal: 12 },
   figureContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
   keyboardContainer: { paddingBottom: 16 },
@@ -132,13 +132,13 @@ const styles = StyleSheet.create({
   tabStrip: { flex: 1, width: width * 2, flexDirection: 'row', alignSelf: 'flex-start' },
   statsSectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
-  statsCard: { width: '48%', padding: 15, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
+  statsCard: { width: '48%', padding: 15, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   statsCardWide: { width: '100%' },
-  statsValue: { fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
+  statsValue: { fontSize: 20, fontWeight: 'bold', marginBottom: 4, textAlign: 'center' },
   statsLabel: { fontSize: 12, textAlign: 'center' },
   loadingText: { fontSize: 16, textAlign: 'center', marginTop: 20 },
   achievementsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  achievementCard: { width: '48%', padding: 12, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
+  achievementCard: { width: '48%', padding: 12, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   achievementCardLocked: { opacity: 0.5 },
   achievementEmoji: { fontSize: 32, marginBottom: 6 },
   achievementEmojiLocked: { opacity: 0.5 },
@@ -181,7 +181,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
       { backgroundColor: cardColor, borderColor },
     ]}
   >
-    <Text style={[styles.statsValue, { color: textColor }]}>{value}</Text>
+    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statsValue, { color: textColor }]}>{value}</Text>
     <Text style={[styles.statsLabel, { color: secondaryText }]}>{label}</Text>
   </View>
 );
@@ -759,7 +759,7 @@ export default function HangmanScreen() {
             <Text style={[styles.infoLabel, { color: background.secondaryText }]}>
               {playingDaily ? 'Daily Challenge' : 'Category'}
             </Text>
-            <Text style={[styles.infoValue, { color: COLORS.accent }]}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.infoValue, { color: COLORS.accent }]}>
               {category}
             </Text>
           </View>
@@ -768,8 +768,7 @@ export default function HangmanScreen() {
             <Text style={[styles.infoLabel, { color: background.secondaryText }]}>
               Lives Left
             </Text>
-            <Text style={[
-              styles.infoValue,
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.infoValue,
               { color: remainingAttempts <= 2 ? COLORS.danger : background.textColor }
             ]}>
               {remainingAttempts}/{maxAttempts}
