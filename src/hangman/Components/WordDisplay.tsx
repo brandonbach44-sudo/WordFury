@@ -21,7 +21,17 @@ const MIN_SLOT_HEIGHT = 20;
 const DEFAULT_LINE_GAP = 16;
 const MIN_LINE_GAP = 4;
 const DEFAULT_SLOT_PAD_BOTTOM = 7;
+// Vertical breathing room around the block. It is decorative, so on a short
+// box it yields its space to the letters instead of competing with them: 40pt
+// of padding inside a 60pt box left almost nothing to size the word against,
+// which is how a plain 8-letter word ended up shrunk to a 12pt font.
 const CONTAINER_PADDING_V = 20;
+const CONTAINER_PADDING_V_TIGHT = 4;
+const paddingForBox = (box: number) => {
+  if (box <= 0) return CONTAINER_PADDING_V;
+  if (box >= 140) return CONTAINER_PADDING_V;
+  return box >= 80 ? CONTAINER_PADDING_V_TIGHT : 0;
+};
 // Long phrases (Countries — "Saint Vincent and the Grenadines") used to
 // wrap into 5+ lines at a fixed slot size, which pushed the keyboard/guess
 // controls off screen. Instead,
@@ -116,7 +126,8 @@ export const WordDisplay: React.FC<WordDisplayProps> = ({
   // the whole phrase wraps within MAX_LINES, instead of wrapping at a fixed
   // size and letting the line count grow unbounded for long phrases.
   const MIN_SLOT_TOTAL = MIN_SLOT_WIDTH + MIN_SLOT_MARGIN * 2;
-  const availableHeight = boxHeight > 0 ? boxHeight - CONTAINER_PADDING_V * 2 : 0;
+  const containerPaddingV = paddingForBox(boxHeight);
+  const availableHeight = boxHeight > 0 ? boxHeight - containerPaddingV * 2 : 0;
 
   const metricsFor = (total: number) => {
     const r = total / DEFAULT_SLOT_TOTAL;
@@ -129,10 +140,20 @@ export const WordDisplay: React.FC<WordDisplayProps> = ({
 
   // Before the first layout lands, availableHeight is 0 and this is skipped,
   // so the width rules alone decide the size exactly as they did before.
+  //
+  // A single row is never shrunk to satisfy this. Stacked rows were the whole
+  // problem (two lines spilling out of the box and showing through the guess
+  // button), and one row at full size is what shipped for months without
+  // complaint. Shrinking it too was an over-correction that made a plain
+  // 8-letter word illegible.
+  //
+  // The gap is counted between rows only. Charging one to the last row as well
+  // overstated the height by 16pt, which on a box this small is the difference
+  // between fitting and shrinking.
   const fitsHeight = (lineCount: number, total: number) => {
-    if (availableHeight <= 0) return true;
+    if (availableHeight <= 0 || lineCount <= 1) return true;
     const { slotHeight, lineGap } = metricsFor(total);
-    return lineCount * (slotHeight + lineGap) <= availableHeight;
+    return lineCount * slotHeight + (lineCount - 1) * lineGap <= availableHeight;
   };
 
   // Shrinking is safe to loop on: smaller slots fit more letters per line, so
@@ -183,7 +204,7 @@ export const WordDisplay: React.FC<WordDisplayProps> = ({
 
   return (
     <View
-      style={styles.container}
+      style={[styles.container, { paddingVertical: containerPaddingV }]}
       onLayout={(e: LayoutChangeEvent) => {
         const h = e.nativeEvent.layout.height;
         if (h > 0 && Math.abs(h - boxHeight) > 1) setBoxHeight(h);
