@@ -12,7 +12,9 @@
     "push": "npm run check && git push origin main",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run lint",
-    "build:ios": "npm run check && eas build --platform ios --profile production"
+    "build:ios": "npm run check && EXPO_APPLE_ID=bbach35@icloud.com eas build --platform ios --profile production",
+    "submit:ios": "EXPO_APPLE_ID=bbach35@icloud.com eas submit --platform ios --latest",
+    "ship:ios": "npm run build:ios && npm run submit:ios"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
