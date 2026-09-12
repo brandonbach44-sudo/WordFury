@@ -12,9 +12,9 @@
 // sections → button row → share button → dismiss button.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Keyboard, Modal, Pressable, ScrollView, Share, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Lightbulb, Share2, X } from 'lucide-react-native';
+import { Keyboard, Pressable, ScrollView, Share, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Lightbulb } from 'lucide-react-native';
 import { useTheme } from '../../shared/ThemeContext';
 import { HapticManager } from '../../shared/HapticManager';
 import { recordRejectedWord } from '../../shared/wordReports';
@@ -25,6 +25,7 @@ import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyRem
 import HexGrid, { type Feedback } from '../components/HexGrid';
 import WordList from '../components/WordList';
 import RankProgressBar from '../components/RankProgressBar';
+import { ResultsScreen } from '../../shared/ResultsScreen';
 import type { HexHivePuzzle } from '../data/puzzles';
 import { getPuzzleSolution, shuffleLetters, getTodayDateString, formatDisplayDate } from '../utils/generator';
 import { checkGuess } from '../utils/validator';
@@ -65,49 +66,8 @@ interface HexHivePlayScreenProps {
   onPlayAgain?: () => void; // practice-only
 }
 
-const StatPill = ({
-  label,
-  value,
-  textColor,
-  borderColor,
-  backgroundColor,
-}: {
-  label: string;
-  value: string;
-  textColor: string;
-  borderColor: string;
-  backgroundColor: string;
-}) => (
-  <View style={[styles.statPill, { borderColor, backgroundColor }]}>
-    <Text style={[styles.statPillLabel, { color: textColor }]}>{label}</Text>
-    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: textColor }]}>{value}</Text>
-  </View>
-);
-
-const PrimaryButton = ({
-  label,
-  onPress,
-  borderColor,
-  textColor,
-  backgroundColor,
-}: {
-  label: string;
-  onPress?: () => void;
-  borderColor: string;
-  textColor: string;
-  backgroundColor: string;
-}) => (
-  <Pressable
-    style={({ pressed }) => [styles.primaryButton, { borderColor, backgroundColor, opacity: pressed ? 0.75 : 1 }]}
-    onPress={onPress}
-  >
-    <Text style={[styles.primaryButtonText, { color: textColor }]}>{label}</Text>
-  </Pressable>
-);
-
 export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, initialTimeLeft, onGoHome, onPlayAgain }: HexHivePlayScreenProps) {
   const { background } = useTheme();
-  const insets = useSafeAreaInsets();
   const solution = useMemo(() => getPuzzleSolution(puzzle), [puzzle]);
   // The rank ladder (and the win condition) is computed against this
   // rescaled target, not solution.maxScore directly — see getEffectiveMaxScore.
@@ -565,164 +525,72 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
       </ScrollView>
 
       {mode === 'practice' && gameOver && (
-        <Modal
+        <ResultsScreen
           visible={resultsVisible}
-          transparent={false}
-          animationType="none"
-          statusBarTranslucent
-          presentationStyle="overFullScreen"
-          onRequestClose={() => setResultsVisible(false)}
-        >
-        <View style={[styles.overlay, { backgroundColor: BG }]}>
-          <View style={[styles.pageHeader, { borderColor: BORDER, paddingTop: insets.top + 10 }]}>
-            <View style={styles.headerSpacer} />
-            <Text style={[styles.brand, { color: SUBTEXT }]}>HEX HIVE</Text>
-            <Pressable
-              style={({ pressed }) => [styles.closeIconButton, { opacity: pressed ? 0.6 : 1 }]}
-              onPress={() => setResultsVisible(false)}
-              hitSlop={16}
-            >
-              <X size={22} color={SUBTEXT} />
-            </Pressable>
-          </View>
-
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.card}>
-            <Text style={[styles.title2, { color: TEXT }]}>Time&apos;s Up!</Text>
-            <Text style={[styles.subtitle, { color: SUBTEXT }]}>
-              You found {foundWords.length} word{foundWords.length === 1 ? '' : 's'} this round.
-            </Text>
-
-            <View style={[styles.rankBox, { borderColor: BORDER }]}>
-              <Text style={[styles.rankBoxLabel, { color: SUBTEXT }]}>RANK</Text>
-              <Text style={[styles.rankBoxValue, { color: ACCENT }]}>{rank.name}</Text>
-            </View>
-
-            <View style={[styles.divider, { backgroundColor: BORDER }]} />
-            <Text style={[styles.sectionTitle, { color: TEXT }]}>This Round</Text>
-            <View style={styles.statsRow}>
-              <StatPill label="Score" value={`${score}`} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-              <StatPill label="Words" value={`${foundWords.length}`} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-              <StatPill label="Pangrams" value={`${pangramsFound}`} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-            </View>
-
-            {finalStats && (
-              <>
-                <View style={[styles.divider, { backgroundColor: BORDER }]} />
-                <Text style={[styles.sectionTitle, { color: TEXT }]}>Stats</Text>
-                <View style={styles.statsRow}>
-                  <StatPill
-                    label="Best Score"
-                    value={`${finalStats.practiceBestScore}`}
-                    textColor={TEXT}
-                    borderColor={BORDER}
-                    backgroundColor={CARD}
-                  />
-                  <StatPill
-                    label="Rounds Played"
-                    value={`${finalStats.practicePuzzlesPlayed}`}
-                    textColor={TEXT}
-                    borderColor={BORDER}
-                    backgroundColor={CARD}
-                  />
-                </View>
-              </>
-            )}
-
-            <View style={styles.buttonRow}>
-              <PrimaryButton label="Play Again" onPress={onPlayAgain} borderColor={BORDER} textColor={TEXT} backgroundColor={CARD} />
-              <PrimaryButton label="Main Menu" onPress={onGoHome} borderColor={BORDER} textColor={TEXT} backgroundColor={CARD} />
-            </View>
-
-            <Pressable
-              style={({ pressed }) => [styles.shareButton, { opacity: pressed ? 0.75 : 1 }]}
-              onPress={handleShareResult}
-            >
-              <View style={styles.shareButtonInner}>
-                <Share2 size={18} color="#fff" />
-                <Text style={styles.shareButtonText}>Share Result</Text>
-              </View>
-            </Pressable>
-
-            <WordReportPrompt />
-          </View>
-          </ScrollView>
-          <AchievementPopup
-            achievement={achievementQueue[0] ?? null}
-            onDismiss={() => setAchievementQueue((q) => q.slice(1))}
-            backgroundColor={CARD}
-            textColor={TEXT}
-          />
-        </View>
-        </Modal>
+          gameName="HEX HIVE"
+          onClose={() => setResultsVisible(false)}
+          title="Time's Up!"
+          subtitle={`${foundWords.length} word${foundWords.length !== 1 ? 's' : ''} \u00b7 ${score} points`}
+          badge={rank.name}
+          cells={[
+            { label: 'WORDS', value: `${foundWords.length}` },
+            { label: 'PANGRAMS', value: `${pangramsFound}` },
+            { label: 'SCORE', value: `${score}`, headline: true },
+          ]}
+          groups={[
+            {
+              caption: 'THIS ROUND',
+              rows: [
+                { label: 'Rank reached', value: rank.name, tone: 'good' as const },
+                { label: 'Words found', value: `${foundWords.length}` },
+                { label: 'Pangrams', value: `${pangramsFound}` },
+              ],
+            },
+            ...(finalStats
+              ? [{
+                  caption: 'ALL TIME',
+                  rows: [
+                    { label: 'Best score', value: `${finalStats.practiceBestScore}` },
+                    { label: 'Rounds played', value: `${finalStats.practicePuzzlesPlayed}` },
+                  ],
+                }]
+              : []),
+          ]}
+          extra={<WordReportPrompt />}
+          onMainMenu={onGoHome}
+          onPlayAgain={onPlayAgain}
+          onShare={handleShareResult}
+          shareLabel="Share Result"
+        />
       )}
 
-      <Modal
+      <ResultsScreen
         visible={mode === 'daily' && showWinCelebration}
-        transparent={false}
-        animationType="slide"
-        statusBarTranslucent
-        presentationStyle="overFullScreen"
-        onRequestClose={() => setShowWinCelebration(false)}
-      >
-        <View style={[styles.overlay, { backgroundColor: BG }]}>
-          <View style={[styles.pageHeader, { borderColor: BORDER, paddingTop: insets.top + 10 }]}>
-            <View style={styles.headerSpacer} />
-            <Text style={[styles.brand, { color: SUBTEXT }]}>HEX HIVE</Text>
-            <Pressable
-              style={({ pressed }) => [styles.closeIconButton, { opacity: pressed ? 0.6 : 1 }]}
-              onPress={() => setShowWinCelebration(false)}
-              hitSlop={16}
-            >
-              <X size={22} color={SUBTEXT} />
-            </Pressable>
-          </View>
-
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.card}>
-            <Text style={[styles.title2, { color: TEXT }]}>Solved!</Text>
-            <Text style={[styles.subtitle, { color: SUBTEXT }]}>
-              You reached {rank.name} rank — today&apos;s hive is complete.
-            </Text>
-
-            <View style={[styles.rankBox, { borderColor: BORDER }]}>
-              <Text style={[styles.rankBoxLabel, { color: SUBTEXT }]}>RANK</Text>
-              <Text style={[styles.rankBoxValue, { color: ACCENT }]}>{rank.name}</Text>
-            </View>
-
-            <View style={[styles.divider, { backgroundColor: BORDER }]} />
-            <Text style={[styles.sectionTitle, { color: TEXT }]}>Today</Text>
-            <View style={styles.statsRow}>
-              <StatPill label="Score" value={`${score}`} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-              <StatPill label="Words" value={`${foundWords.length}`} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-              <StatPill label="Pangrams" value={`${pangramsFound}`} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-            </View>
-
-            <View style={styles.buttonRow}>
-              <PrimaryButton label="Main Menu" onPress={onGoHome} borderColor={BORDER} textColor={TEXT} backgroundColor={CARD} />
-            </View>
-
-            <Pressable
-              style={({ pressed }) => [styles.shareButton, { opacity: pressed ? 0.75 : 1 }]}
-              onPress={handleShareWin}
-            >
-              <View style={styles.shareButtonInner}>
-                <Share2 size={18} color="#fff" />
-                <Text style={styles.shareButtonText}>Share Result</Text>
-              </View>
-            </Pressable>
-
-            <WordReportPrompt />
-          </View>
-          </ScrollView>
-          <AchievementPopup
-            achievement={achievementQueue[0] ?? null}
-            onDismiss={() => setAchievementQueue((q) => q.slice(1))}
-            backgroundColor={CARD}
-            textColor={TEXT}
-          />
-        </View>
-      </Modal>
+        gameName="HEX HIVE"
+        onClose={() => setShowWinCelebration(false)}
+        title="Solved!"
+        subtitle={`${foundWords.length} word${foundWords.length !== 1 ? 's' : ''} \u00b7 ${score} points`}
+        badge={rank.name}
+        cells={[
+          { label: 'WORDS', value: `${foundWords.length}` },
+          { label: 'PANGRAMS', value: `${pangramsFound}` },
+          { label: 'SCORE', value: `${score}`, headline: true },
+        ]}
+        groups={[
+          {
+            caption: 'TODAY',
+            rows: [
+              { label: 'Rank reached', value: rank.name, tone: 'good' as const },
+              { label: 'Words found', value: `${foundWords.length}` },
+              { label: 'Pangrams', value: `${pangramsFound}` },
+            ],
+          },
+        ]}
+        extra={<WordReportPrompt />}
+        onMainMenu={onGoHome}
+        onShare={handleShareWin}
+        shareLabel="Share Result"
+      />
     </SafeAreaView>
   );
 }
@@ -778,48 +646,6 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
   },
-  pageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  headerSpacer: { width: 22 },
-  closeIconButton: { width: 22, alignItems: 'flex-end' },
-  scrollContent: { alignItems: 'center', padding: 18 },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: 18,
-    padding: 8,
-  },
-  brand: { textAlign: 'center', fontSize: 12, fontWeight: '900', letterSpacing: 2 },
   title2: { textAlign: 'center', fontSize: 22, fontWeight: '900', marginBottom: 4, marginTop: 12 },
   subtitle: { textAlign: 'center', fontSize: 14, fontWeight: '600', marginBottom: 12 },
-  rankBox: { borderWidth: 2, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12, alignItems: 'center' },
-  rankBoxLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 1, marginBottom: 4 },
-  rankBoxValue: { fontSize: 26, fontWeight: '900', letterSpacing: 1 },
-  divider: { height: 1, marginVertical: 12, opacity: 0.35 },
-  sectionTitle: { fontSize: 14, fontWeight: '900', marginBottom: 8, textAlign: 'center', letterSpacing: 1 },
-  statsRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 },
-  statPill: { borderWidth: 2, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12, minWidth: 100, alignItems: 'center', justifyContent: 'center' },
-  statPillLabel: { fontSize: 11, fontWeight: '800', opacity: 0.8, marginBottom: 2 },
-  statPillValue: { fontSize: 14, fontWeight: '900', textAlign: 'center' },
-  buttonRow: { flexDirection: 'row', justifyContent: 'center', width: '100%', gap: 10, marginTop: 24 },
-  primaryButton: { borderWidth: 2, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, minWidth: 120, alignItems: 'center' },
-  primaryButtonText: { fontSize: 13, fontWeight: '900', letterSpacing: 1 },
-  shareButton: {
-    marginTop: 18,
-    borderRadius: 999,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    backgroundColor: '#22c55e',
-  },
-  shareButtonInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  shareButtonText: { fontSize: 15, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
-  secondaryButton: { marginTop: 10, borderWidth: 2, borderRadius: 999, paddingVertical: 10, alignItems: 'center' },
-  secondaryButtonText: { fontSize: 13, fontWeight: '900', letterSpacing: 1 },
 });

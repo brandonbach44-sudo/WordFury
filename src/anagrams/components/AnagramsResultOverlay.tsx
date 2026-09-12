@@ -4,7 +4,7 @@
 // button, close).
 
 import React from 'react';
-import { Modal, Share } from 'react-native';
+import { Share } from 'react-native';
 
 import { useTheme } from '../../shared/ThemeContext';
 import { AchievementPopup, AchievementLike } from '../../shared/AchievementPopup';

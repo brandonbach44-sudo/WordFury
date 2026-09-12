@@ -1,10 +1,9 @@
-import React from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Share2, X } from "lucide-react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import React, { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "../../shared/ThemeContext";
 import { AchievementPopup, AchievementLike } from "../../shared/AchievementPopup";
+import { ResultsScreen } from "../../shared/ResultsScreen";
 import { WordReportPrompt } from "../../shared/WordReportPrompt";
 
 type CellState = "correct" | "present" | "absent" | "empty";
@@ -54,46 +53,6 @@ function formatCountdown(totalSeconds: number): string {
     .padStart(2, "0")}m ${sec.toString().padStart(2, "0")}s`;
 }
 
-const StatPill = ({
-  label,
-  value,
-  textColor,
-  borderColor,
-  backgroundColor,
-}: {
-  label: string;
-  value: string;
-  textColor: string;
-  borderColor: string;
-  backgroundColor: string;
-}) => {
-  return (
-    <View style={[styles.statPill, { borderColor, backgroundColor }]}>
-      <Text style={[styles.statPillLabel, { color: textColor }]}>{label}</Text>
-      <Text style={[styles.statPillValue, { color: textColor }]}>{value}</Text>
-    </View>
-  );
-};
-
-const BigStat = ({
-  value,
-  label,
-  textColor,
-  secondaryText,
-}: {
-  value: string;
-  label: string;
-  textColor: string;
-  secondaryText: string;
-}) => {
-  return (
-    <View style={styles.bigStat}>
-      <Text style={[styles.bigStatValue, { color: textColor }]}>{value}</Text>
-      <Text style={[styles.bigStatLabel, { color: secondaryText }]}>{label}</Text>
-    </View>
-  );
-};
-
 const GuessDistributionChart = ({
   distribution,
   highlightGuess,
@@ -137,37 +96,6 @@ const GuessDistributionChart = ({
   );
 };
 
-const PrimaryButton = ({
-  label,
-  onPress,
-  borderColor,
-  textColor,
-  backgroundColor,
-  fullWidth,
-}: {
-  label: string;
-  onPress: () => void;
-  borderColor: string;
-  textColor: string;
-  backgroundColor: string;
-  fullWidth?: boolean;
-}) => {
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.primaryButton,
-        fullWidth && styles.primaryButtonFullWidth,
-        { borderColor, backgroundColor, opacity: pressed ? 0.75 : 1 },
-      ]}
-      onPress={onPress}
-    >
-      <Text style={[styles.primaryButtonText, { color: textColor }]}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-};
-
 const WordleResultOverlay = ({
   visible,
   mode,
@@ -194,7 +122,6 @@ const WordleResultOverlay = ({
   onDismissAchievement,
 }: Props) => {
   const { background } = useTheme();
-  const insets = useSafeAreaInsets();
 
   const handleShare = async () => {
     try {
@@ -207,13 +134,12 @@ const WordleResultOverlay = ({
       console.warn("Share failed", e);
     }
   };
-
-  const BG = background.backgroundColor ?? "#f9f5ec";
   const TEXT = background.textColor ?? "#111827";
   const SUBTEXT = background.secondaryText ?? "#6b7280";
-  const CARD = background.cardColor ?? "#ffffff";
   const BORDER = background.borderColor ?? "#e5e7eb";
+  const CARD = background.cardColor ?? "#ffffff";
 
+  const [showDistribution, setShowDistribution] = useState(false);
   const isDaily = mode === "daily";
   const isWin = status === "won";
   const hasThisGameData = guessesCount > 0 || timeSeconds != null;
@@ -257,357 +183,115 @@ const WordleResultOverlay = ({
   // toast mounted only at the parent screen level would otherwise be hidden
   // behind this overlay (native Modals always paint above plain views).
   return (
-    <Modal
-      visible={visible}
-      transparent={false}
-      animationType="none"
-      statusBarTranslucent
-      presentationStyle="overFullScreen"
-      onRequestClose={onClose}
-    >
-      <View style={[styles.overlay, { backgroundColor: BG }]}>
-      {/* Page header — mirrors the app's other full-screen headers */}
-      <View style={[styles.pageHeader, { borderColor: BORDER, paddingTop: insets.top + 10 }]}>
-        <View style={styles.headerSpacer} />
-        <Text style={[styles.brand, { color: SUBTEXT }]}>FURDLE</Text>
-        <Pressable
-          style={({ pressed }) => [styles.closeIconButton, { opacity: pressed ? 0.6 : 1 }]}
-          onPress={onClose}
-          hitSlop={16}
-        >
-          <X size={22} color={SUBTEXT} />
-        </Pressable>
-      </View>
-
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 24 },
+    <>
+      <ResultsScreen
+        visible={visible}
+        gameName="FURDLE"
+        onClose={onClose}
+        title={title}
+        subtitle={subtitle}
+        badge={solutionWord ? solutionWord.toUpperCase() : undefined}
+        cells={[
+          {
+            label: 'GUESSES',
+            value: hasThisGameData ? (isWin ? `${guessesCount}/6` : 'X/6') : '\u2014',
+          },
+          { label: 'TIME', value: timeText ?? '\u2014' },
+          {
+            label: 'STREAK',
+            value: currentStreak != null ? `${currentStreak}` : '\u2014',
+            headline: true,
+          },
         ]}
-        showsVerticalScrollIndicator={false}
-      >
-      <View style={styles.card}>
-        {/* Title + subtitle */}
-        <Text style={[styles.title, { color: TEXT }]}>{title}</Text>
-        <Text style={[styles.subtitle, { color: SUBTEXT }]}>{subtitle}</Text>
-
-        {/* Solution */}
-        <View style={[styles.solutionBox, { borderColor: BORDER }]}>
-          <Text style={[styles.solutionLabel, { color: SUBTEXT }]}>Solution</Text>
-          <Text style={[styles.solutionWord, { color: TEXT }]}>
-            {solutionWord.toUpperCase()}
-          </Text>
-        </View>
-
-        {/* This game (only if we have real data) */}
-        {hasThisGameData && (
+        groups={[
+          ...(hasThisGameData
+            ? [{
+                caption: 'THIS GAME',
+                rows: [
+                  { label: 'Result', value: isWin ? 'Solved' : 'Out of guesses',
+                    tone: (isWin ? 'good' : 'warn') as 'good' | 'warn' },
+                  ...(timeText ? [{ label: 'Time', value: timeText }] : []),
+                ],
+              }]
+            : []),
+          {
+            caption: 'ALL TIME',
+            rows: [
+              ...(winPercentage != null ? [{ label: 'Win rate', value: `${winPercentage}%` }] : []),
+              ...(gamesPlayed != null ? [{ label: 'Games played', value: `${gamesPlayed}` }] : []),
+              ...(bestGuessCount != null
+                ? [{ label: 'Best solve', value: `${bestGuessCount} ${bestGuessCount === 1 ? 'guess' : 'guesses'}` }]
+                : []),
+              ...(averageGuesses != null
+                ? [{ label: 'Average guesses', value: averageGuesses.toFixed(1) }]
+                : []),
+              ...(avgTimeText ? [{ label: 'Average time', value: avgTimeText }] : []),
+              ...(bestStreak != null
+                ? [{ label: 'Best streak', value: `${bestStreak} ${bestStreak === 1 ? 'day' : 'days'}` }]
+                : []),
+            ],
+          },
+        ]}
+        countdown={
+          isDaily && nextDailySecondsRemaining != null
+            ? { label: 'NEXT DAILY IN', value: formatCountdown(nextDailySecondsRemaining) }
+            : null
+        }
+        extra={
           <>
-            <View
-              style={[styles.divider, { backgroundColor: BORDER, opacity: 0.35 }]}
-            />
-            <Text style={[styles.sectionTitle, { color: TEXT }]}>This game</Text>
-            <View style={styles.statsRow}>
-              <StatPill
-                label="Guesses"
-                value={`${guessesCount}`}
-                textColor={TEXT}
-                borderColor={BORDER}
-                backgroundColor={CARD}
-              />
-              {timeText ? (
-                <StatPill
-                  label="Time"
-                  value={timeText}
-                  textColor={TEXT}
-                  borderColor={BORDER}
-                  backgroundColor={BG}
-                />
-              ) : null}
-            </View>
+            {guessDistribution ? (
+              <View style={{ marginTop: 22 }}>
+                <Pressable
+                  onPress={() => setShowDistribution((v) => !v)}
+                  style={({ pressed }) => [
+                    styles.chartToggle,
+                    { borderColor: BORDER, backgroundColor: CARD, opacity: pressed ? 0.75 : 1 },
+                  ]}
+                >
+                  <Text style={[styles.chartToggleText, { color: TEXT }]}>
+                    {showDistribution ? 'Hide guess distribution' : 'Show guess distribution'}
+                  </Text>
+                </Pressable>
+                {showDistribution && (
+                  <View style={{ marginTop: 10 }}>
+                    <GuessDistributionChart
+                      distribution={guessDistribution}
+                      highlightGuess={isWin ? guessesCount : null}
+                      textColor={TEXT}
+                      secondaryText={SUBTEXT}
+                    />
+                  </View>
+                )}
+              </View>
+            ) : null}
+            <WordReportPrompt />
           </>
-        )}
-
-        {/* Mode stats — NYT-style STATISTICS block */}
-        <View style={[styles.divider, { backgroundColor: BORDER, opacity: 0.35 }]} />
-        <Text style={[styles.sectionTitle, { color: TEXT }]}>Statistics</Text>
-
-        <View style={styles.bigStatsRow}>
-          <BigStat
-            value={gamesPlayed != null ? `${gamesPlayed}` : "--"}
-            label="Played"
-            textColor={TEXT}
-            secondaryText={SUBTEXT}
-          />
-          <BigStat
-            value={winPercentage != null ? `${winPercentage}` : "--"}
-            label="Win %"
-            textColor={TEXT}
-            secondaryText={SUBTEXT}
-          />
-          {isDaily ? (
-            <>
-              <BigStat
-                value={currentStreak != null ? `${currentStreak}` : "--"}
-                label={"Current\nStreak"}
-                textColor={TEXT}
-                secondaryText={SUBTEXT}
-              />
-              <BigStat
-                value={bestStreak != null ? `${bestStreak}` : "--"}
-                label={"Max\nStreak"}
-                textColor={TEXT}
-                secondaryText={SUBTEXT}
-              />
-            </>
-          ) : (
-            <>
-              <BigStat
-                value={bestGuessCount != null ? `${bestGuessCount}` : "--"}
-                label={"Best\nGuess"}
-                textColor={TEXT}
-                secondaryText={SUBTEXT}
-              />
-              <BigStat
-                value={averageGuesses != null ? averageGuesses.toFixed(1) : "--"}
-                label={"Avg\nGuesses"}
-                textColor={TEXT}
-                secondaryText={SUBTEXT}
-              />
-            </>
-          )}
-        </View>
-
-        {avgTimeText ? (
-          <Text style={[styles.avgTimeNote, { color: SUBTEXT }]}>
-            Avg time: {avgTimeText}
-          </Text>
-        ) : null}
-
-        {guessDistribution ? (
-          <>
-            <View
-              style={[styles.divider, { backgroundColor: BORDER, opacity: 0.35 }]}
-            />
-            <Text style={[styles.sectionTitle, { color: TEXT }]}>
-              Guess Distribution
-            </Text>
-            <GuessDistributionChart
-              distribution={guessDistribution}
-              highlightGuess={isWin ? guessesCount : null}
-              textColor={TEXT}
-              secondaryText={SUBTEXT}
-            />
-          </>
-        ) : null}
-
-        {/* Countdown */}
-        {isDaily && nextDailySecondsRemaining != null ? (
-          <>
-            <View
-              style={[styles.divider, { backgroundColor: BORDER, opacity: 0.35 }]}
-            />
-            <Text style={[styles.countdownLabel, { color: SUBTEXT }]}>
-              Next Daily in
-            </Text>
-            <Text style={[styles.countdownValue, { color: TEXT }]}>
-              {formatCountdown(nextDailySecondsRemaining)}
-            </Text>
-          </>
-        ) : null}
-
-        {/* Buttons */}
-        <View style={styles.buttonRow}>
-          {isDaily ? (
-            <PrimaryButton
-              label="Main Menu"
-              onPress={onGoHome}
-              borderColor={BORDER}
-              textColor={TEXT}
-              backgroundColor={CARD}
-              fullWidth
-            />
-          ) : (
-            <>
-              <PrimaryButton
-                label="Play Again"
-                onPress={onPlayAgain}
-                borderColor={BORDER}
-                textColor={TEXT}
-                backgroundColor={CARD}
-              />
-              <PrimaryButton
-                label="Main Menu"
-                onPress={onGoHome}
-                borderColor={BORDER}
-                textColor={TEXT}
-                backgroundColor={CARD}
-              />
-            </>
-          )}
-        </View>
-
-        {hasThisGameData && (
-          <Pressable
-            style={({ pressed }) => [styles.shareButton, { opacity: pressed ? 0.75 : 1 }]}
-            onPress={handleShare}
-          >
-            <View style={styles.shareButtonInner}>
-              <Share2 size={18} color="#fff" />
-              <Text style={styles.shareButtonText}>Share Result</Text>
-            </View>
-          </Pressable>
-        )}
-
-        <WordReportPrompt />
-      </View>
-      </ScrollView>
+        }
+        onMainMenu={onGoHome}
+        onPlayAgain={isDaily ? undefined : onPlayAgain}
+        onShare={hasThisGameData ? handleShare : undefined}
+        shareLabel="Share Result"
+      />
       <AchievementPopup
         achievement={achievement}
         onDismiss={onDismissAchievement ?? (() => {})}
         backgroundColor={CARD}
         textColor={TEXT}
       />
-      </View>
-    </Modal>
+    </>
   );
 };
 
 export default WordleResultOverlay;
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-  },
-  pageHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  headerSpacer: {
-    width: 22,
-  },
-  closeIconButton: {
-    width: 22,
-    alignItems: "flex-end",
-  },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 18,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 420,
-    borderRadius: 18,
-    padding: 8,
-  },
-  brand: {
-    textAlign: "center",
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  title: {
-    textAlign: "center",
-    fontSize: 22,
-    fontWeight: "900",
-    marginBottom: 6,
-    marginTop: 10,
-  },
-  subtitle: {
-    textAlign: "center",
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-  solutionBox: {
+  chartToggle: {
     borderWidth: 2,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    paddingVertical: 10,
     alignItems: "center",
   },
-  solutionLabel: {
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  solutionWord: {
-    fontSize: 26,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  divider: {
-    height: 1,
-    marginVertical: 12,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "900",
-    marginBottom: 8,
-    textAlign: "center",
-    letterSpacing: 1,
-  },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 10,
-    flexWrap: "wrap",
-    marginBottom: 8,
-  },
-  statPill: {
-    borderWidth: 2,
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    minWidth: 110,
-    alignItems: "center",
-  },
-  statPillLabel: {
-    fontSize: 10,
-    fontWeight: "800",
-    opacity: 0.8,
-    marginBottom: 2,
-  },
-  statPillValue: {
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  bigStatsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    paddingHorizontal: 4,
-    marginBottom: 2,
-  },
-  bigStat: {
-    flex: 1,
-    alignItems: "center",
-  },
-  bigStatValue: {
-    fontSize: 26,
-    fontWeight: "900",
-    fontVariant: ["tabular-nums"],
-  },
-  bigStatLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    textAlign: "center",
-    marginTop: 2,
-    lineHeight: 13,
-  },
-  avgTimeNote: {
-    textAlign: "center",
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 4,
-  },
+  chartToggleText: { fontSize: 14, fontWeight: "800" },
   distWrap: {
     marginTop: 2,
   },
@@ -639,74 +323,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 12,
     fontWeight: "900",
-  },
-  countdownLabel: {
-    textAlign: "center",
-    fontSize: 12,
-    fontWeight: "800",
-    marginBottom: 4,
-    letterSpacing: 1,
-  },
-  countdownValue: {
-    textAlign: "center",
-    fontSize: 18,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    width: "100%",
-    gap: 10,
-    marginTop: 24,
-  },
-  primaryButton: {
-    borderWidth: 2,
-    borderRadius: 999,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    minWidth: 120,
-    alignItems: "center",
-  },
-  primaryButtonFullWidth: {
-    width: "100%",
-    paddingVertical: 12,
-    minWidth: undefined,
-  },
-  primaryButtonText: {
-    fontSize: 13,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-  shareButton: {
-    marginTop: 18,
-    borderRadius: 999,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    backgroundColor: "#22c55e",
-  },
-  shareButtonInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  shareButtonText: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: "#fff",
-    letterSpacing: 0.5,
-  },
-  secondaryButton: {
-    marginTop: 10,
-    borderWidth: 2,
-    borderRadius: 999,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  secondaryButtonText: {
-    fontSize: 13,
-    fontWeight: "900",
-    letterSpacing: 1,
   },
 });

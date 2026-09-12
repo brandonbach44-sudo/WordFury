@@ -5,8 +5,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Dimensions,
-  FlatList,
-  Modal,
   PanResponder,
   Pressable,
   ScrollView,
@@ -17,10 +15,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Share2, X } from 'lucide-react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '../../shared/ThemeContext';
+import { ResultsScreen } from '../../shared/ResultsScreen';
 import { COLORS } from '../../shared/theme';
 import { maybeRequestReview } from '../../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyReminders';
@@ -71,7 +69,6 @@ const { width } = Dimensions.get('window');
 type Screen = 'menu' | 'game' | 'results';
 type GameMode = 'quick' | 'daily';
 type MenuTab = 'play' | 'stats';
-type ResultsPage = 'results' | 'words';
 
 const ROUND_DURATION = 60;
 
@@ -117,13 +114,11 @@ export default function GameScreen() {
   // <Modal>, which jammed the header under the notch and clipped the brand
   // title. The plain "game" screen below isn't in a Modal, so its
   // SafeAreaView is unaffected and left as-is.
-  const insets = useSafeAreaInsets();
 
   // ── Screen / tab state ────────────────────────────────────────────────────
   const [screen, setScreen] = useState<Screen>('menu');
   const [menuTab, setMenuTab] = useState<MenuTab>('play');
-  const [resultsPage, setResultsPage] = useState<ResultsPage>('results');
-  const resultsScrollRef = useRef<ScrollView>(null);
+  const [showWordList, setShowWordList] = useState(false);
 
   // Tab swipe animation (2 tabs: play, stats)
   const TABS: MenuTab[] = ['play', 'stats'];
@@ -229,7 +224,6 @@ export default function GameScreen() {
 
   // ── Game mode & daily ─────────────────────────────────────────────────────
   const [gameMode, setGameMode] = useState<GameMode>('quick');
-  const [showDailyPopup, setShowDailyPopup] = useState(false);
   const [dailyShareText, setDailyShareText] = useState('');
 
   const dailyPlayedToday = dailyStats?.lastPlayedDate === getTodayDateString();
@@ -440,7 +434,6 @@ export default function GameScreen() {
           streak: newDailyStats.streak,
         });
         setDailyShareText(text);
-        setShowDailyPopup(true);
         // No win/lose state in Word Grid (score race, not solve/fail), so
         // the streak itself — built just by showing up — is the "good
         // moment" signal here instead of a win flag.
@@ -450,7 +443,7 @@ export default function GameScreen() {
         setScreen('results');
       } else {
         await clearWordGridQuickPlayProgress();
-        setResultsPage('results');
+        setShowWordList(false);
         setScreen('results');
       }
     })();
@@ -466,7 +459,6 @@ export default function GameScreen() {
       setGameMode('quick');
       setGameOver(false);
       setFeedbacks([]);
-      setShowDailyPopup(false);
       setScreen('game');
       setTimeout(startTimer, 100);
       return;
@@ -482,7 +474,6 @@ export default function GameScreen() {
     setTimeLeft(ROUND_DURATION);
     setGameOver(false);
     setFeedbacks([]);
-    setShowDailyPopup(false);
     setScreen('game');
     setTimeout(startTimer, 100);
   }, [startTimer]);
@@ -495,7 +486,6 @@ export default function GameScreen() {
     if (resumedDailyRef.current) {
       setGameOver(false);
       setFeedbacks([]);
-      setShowDailyPopup(false);
       setScreen('game');
       setTimeout(startTimer, 100);
       return;
@@ -509,7 +499,6 @@ export default function GameScreen() {
     setTimeLeft(ROUND_DURATION);
     setGameOver(false);
     setFeedbacks([]);
-    setShowDailyPopup(false);
     setScreen('game');
     setTimeout(startTimer, 100);
   }, [startTimer]);
@@ -529,7 +518,7 @@ export default function GameScreen() {
     setTimeLeft(ROUND_DURATION);
     setGameOver(false);
     setFeedbacks([]);
-    setResultsPage('results');
+    setShowWordList(false);
     setScreen('game');
     setTimeout(startTimer, 100);
   }, [startTimer]);
@@ -537,8 +526,7 @@ export default function GameScreen() {
   const handleBackToMenu = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     setGameOver(false);
-    setResultsPage('results');
-    setShowDailyPopup(false);
+    setShowWordList(false);
     setScreen('menu');
     switchToTab('play');
   }, [switchToTab]);
@@ -638,248 +626,95 @@ export default function GameScreen() {
     const topWordEntry = foundWords.length > 0
       ? foundWords.reduce((best, w) => (w.points > best.points ? w : best), foundWords[0])
       : null;
+    const isDaily = gameMode === 'daily';
+    const sortedWords = [...foundWords].sort((a, b) => b.points - a.points);
 
-    const handleResultsScroll = (event: any) => {
-      const offsetX = event.nativeEvent.contentOffset.x;
-      const page = Math.round(offsetX / width);
-      setResultsPage(page === 0 ? 'results' : 'words');
-    };
-
-    // Rendered in a native Modal — matching every other game's results
-    // presentation (slide up from the bottom, full page) instead of the old
-    // plain conditional swap, which looked like a flat popup rather than
-    // its own page.
-    return (
-      <Modal
-        visible
-        transparent={false}
-        animationType="none"
-        statusBarTranslucent
-        presentationStyle="overFullScreen"
-        onRequestClose={handleBackToMenu}
-      >
-      <View style={[styles.container, { backgroundColor: bg.backgroundColor }]}>
-        <StatusBar barStyle={bg.statusBar === 'dark' ? 'dark-content' : 'light-content'} />
-
-        <AchievementPopup
-          achievement={currentAchievement}
-          onDismiss={() => setCurrentAchievement(null)}
-          backgroundColor={bg.cardColor}
-          textColor={bg.textColor}
-        />
-
-        {/* Daily streak info is now inline in the results card below — no overlay needed */}
-
-        {/* Page header — Word Grid has no persistent board to look back at,
-            so X just acts like Main Menu. */}
-        <View style={[styles.resultsPageHeader, { borderColor: bg.borderColor, paddingTop: insets.top + 10 }]}>
-          <View style={styles.resultsHeaderSpacer} />
-          <Text style={[styles.brand, { color: bg.secondaryText }]}>WORD GRID</Text>
-          <Pressable
-            style={({ pressed }) => [styles.resultsCloseIconButton, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={handleBackToMenu}
-            hitSlop={10}
-          >
-            <X size={22} color={bg.secondaryText} />
-          </Pressable>
-        </View>
-
-        {/* Horizontal swipe carousel */}
-        <ScrollView
-          ref={resultsScrollRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={handleResultsScroll}
-          style={{ flex: 1 }}
+    // The found-word list used to live on a second swipe page of its own, which
+    // is exactly the kind of per-game divergence the shared screen exists to
+    // remove. It is a toggle here instead, collapsed by default, the same way
+    // Word Search hides its answer key, so a 30-word round cannot push the
+    // buttons off screen.
+    const wordList = foundWords.length > 0 ? (
+      <View style={{ marginTop: 22 }}>
+        <Pressable
+          onPress={() => setShowWordList((v) => !v)}
+          style={({ pressed }) => [
+            styles.wordListToggle,
+            { borderColor: bg.borderColor, backgroundColor: bg.cardColor, opacity: pressed ? 0.75 : 1 },
+          ]}
         >
-          {/* ── PAGE 1: RESULTS ── */}
-          <View style={[styles.carouselPage, { width }]}>
-            <ScrollView
-              contentContainerStyle={styles.resultsPageContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.resultsCard}>
-
-                <Text style={[styles.gameOverTitle, { color: bg.textColor }]}>Time's Up!</Text>
-                <Text style={[styles.gameOverSubtitle, { color: bg.secondaryText }]}>
-                  {foundWords.length} word{foundWords.length !== 1 ? 's' : ''} · {score} points
-                </Text>
-
-                {/* ── This Game ── */}
-                <View style={[styles.resultsDivider, { backgroundColor: bg.borderColor }]} />
-                <Text style={[styles.resultsSectionTitle, { color: bg.textColor }]}>This game</Text>
-                <View style={styles.statsRow}>
-                  <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
-                    <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Words</Text>
-                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{foundWords.length}</Text>
-                  </View>
-                  <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
-                    <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Score</Text>
-                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: COLORS.accent }]}>{score}</Text>
-                  </View>
-                </View>
-                <View style={styles.statsRow}>
-                  <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
-                    <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Best Length</Text>
-                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{bestLen}</Text>
-                  </View>
-                  <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
-                    <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Best Word</Text>
-                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>
-                      {topWordEntry ? `${topWordEntry.word.toUpperCase()} (${topWordEntry.points})` : '—'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* ── Lifetime Stats ── */}
-                {stats && stats.gamesPlayed > 0 && (
-                  <>
-                    <View style={[styles.resultsDivider, { backgroundColor: bg.borderColor }]} />
-                    <Text style={[styles.resultsSectionTitle, { color: bg.textColor }]}>Your stats</Text>
-                    <View style={styles.statsRow}>
-                      <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
-                        <Text style={[styles.statPillLabel, { color: bg.textColor }]}>High Score</Text>
-                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{stats.highScore.toLocaleString()}</Text>
-                      </View>
-                      <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
-                        <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Games</Text>
-                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{stats.gamesPlayed}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.statsRow}>
-                      <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
-                        <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Total Words</Text>
-                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{stats.totalWordsFound.toLocaleString()}</Text>
-                      </View>
-                      <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
-                        <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Best/Game</Text>
-                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{stats.bestWordsInGame}</Text>
-                      </View>
-                    </View>
-                  </>
-                )}
-
-                {/* Daily streak + countdown — only for daily games */}
-                {gameMode === 'daily' && dailyStats && (
-                  <>
-                    <View style={[styles.resultsDivider, { backgroundColor: bg.borderColor }]} />
-                    <Text style={[styles.resultsSectionTitle, { color: bg.textColor }]}>Daily streak</Text>
-                    <View style={styles.statsRow}>
-                      <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
-                        <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Current</Text>
-                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{dailyStats.streak ?? 0}</Text>
-                      </View>
-                      <View style={[styles.statPill, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}>
-                        <Text style={[styles.statPillLabel, { color: bg.textColor }]}>Best</Text>
-                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor }]}>{dailyStats.bestStreak ?? 0}</Text>
-                      </View>
-                    </View>
-                    <View style={[styles.resultsDivider, { backgroundColor: bg.borderColor }]} />
-                    <Text style={[styles.statPillLabel, { color: bg.secondaryText, textAlign: 'center', letterSpacing: 1 }]}>
-                      NEXT DAILY IN
-                    </Text>
-                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.statPillValue, { color: bg.textColor, textAlign: 'center', fontSize: 20, marginTop: 4 }]}>
-                      {dailyCountdown}
-                    </Text>
-                  </>
-                )}
-
-                <WordReportPrompt />
-              </View>
-            </ScrollView>
-          </View>
-
-          {/* ── PAGE 2: WORDS FOUND ── */}
-          <View style={[styles.carouselPage, { width }]}>
-            <Text style={[styles.wordsPageTitle, { color: bg.textColor }]}>Words Found</Text>
-            <Text style={[styles.wordsPageSubtitle, { color: bg.secondaryText }]}>
-              {foundWords.length} word{foundWords.length !== 1 ? 's' : ''}
-            </Text>
-
-            <FlatList
-              data={[...foundWords].sort((a, b) => b.points - a.points)}
-              keyExtractor={(item, i) => `${item.word}-${i}`}
-              style={styles.wordsList}
-              contentContainerStyle={styles.wordsListContent}
-              numColumns={2}
-              renderItem={({ item }) => (
-                <View style={[styles.wordItem, { backgroundColor: bg.cardColor, borderColor: bg.borderColor }]}>
-                  <Text style={[styles.wordText, { color: bg.textColor }]}>{item.word}</Text>
-                  <Text style={[styles.wordScore, { color: bg.secondaryText }]}>{item.points} pts</Text>
-                </View>
-              )}
-              ListEmptyComponent={
-                <Text style={[styles.noWordsText, { color: bg.secondaryText }]}>No words found this round</Text>
-              }
-            />
-          </View>
-        </ScrollView>
-
-        {/* Buttons — persistent across both swipe pages, matching every other game's post-game bar.
-            Play Again only makes sense outside Daily (one attempt per day), same rule as every
-            other game's results screen. */}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[
-              styles.primaryButton,
-              gameMode === 'daily' && styles.primaryButtonFullWidth,
-              { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor },
-            ]}
-            onPress={handleBackToMenu}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.primaryButtonText, { color: bg.textColor }]}>Main Menu</Text>
-          </TouchableOpacity>
-          {gameMode !== 'daily' && (
-            <TouchableOpacity
-              style={[styles.primaryButton, { borderColor: bg.borderColor, backgroundColor: bg.backgroundColor }]}
-              onPress={handlePlayAgain}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.primaryButtonText, { color: bg.textColor }]}>Play Again</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {foundWords.length > 0 && (
-          <Pressable
-            style={({ pressed }) => [styles.shareButton, { opacity: pressed ? 0.75 : 1 }]}
-            onPress={handleShareResult}
-          >
-            <View style={styles.shareButtonInner}>
-              <Share2 size={18} color="#fff" />
-              <Text style={styles.shareButtonText}>Share Result</Text>
-            </View>
-          </Pressable>
-        )}
-
-        {/* Page indicator */}
-        <View style={styles.pageIndicatorContainer}>
-          <View style={styles.pageIndicatorLabels}>
-            <Text style={[styles.pageIndicatorLabel, { color: resultsPage === 'results' ? bg.textColor : bg.secondaryText }]}>
-              Results
-            </Text>
-            <Text style={[styles.pageIndicatorLabel, { color: resultsPage === 'words' ? bg.textColor : bg.secondaryText }]}>
-              Words Found
-            </Text>
-          </View>
-          <View style={styles.pageIndicator}>
-            <View style={[styles.pageDot, resultsPage === 'results' && styles.pageDotActive]} />
-            <View style={[styles.pageDot, resultsPage === 'words' && styles.pageDotActive]} />
-          </View>
-          {/* Always rendered (never conditionally mounted) — same fix as
-              Wordsmith's identical hint text. Toggling this off entirely on
-              the "words" page shrinks whatever's below/around it and can
-              yank neighboring buttons, so opacity toggles visibility
-              without changing layout height. */}
-          <Text style={[styles.swipeHintText, { color: bg.secondaryText, opacity: resultsPage === 'results' ? 1 : 0 }]}>
-            Swipe to see words →
+          <Text style={[styles.wordListToggleText, { color: bg.textColor }]}>
+            {showWordList ? 'Hide words' : `Show all ${foundWords.length} words`}
           </Text>
-        </View>
-        <View style={{ height: insets.bottom }} />
+        </Pressable>
+        {showWordList && (
+          <View style={{ marginTop: 10 }}>
+            {sortedWords.map((item) => (
+              <View key={item.word} style={styles.wordListRow}>
+                <Text style={[styles.wordListWord, { color: bg.textColor }]}>{item.word}</Text>
+                <Text style={[styles.wordListPoints, { color: bg.secondaryText }]}>{item.points} pts</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
-      </Modal>
+    ) : null;
+
+    return (
+      <ResultsScreen
+        visible
+        gameName="WORD GRID"
+        onClose={handleBackToMenu}
+        title="Time's Up!"
+        subtitle={`${foundWords.length} word${foundWords.length !== 1 ? 's' : ''} \u00b7 ${score} points`}
+        cells={[
+          { label: 'WORDS', value: `${foundWords.length}` },
+          { label: 'BEST', value: topWordEntry ? topWordEntry.word.toUpperCase() : '\u2014' },
+          { label: 'SCORE', value: score.toLocaleString(), headline: true },
+        ]}
+        groups={[
+          {
+            caption: 'THIS GAME',
+            rows: [
+              { label: 'Words found', value: `${foundWords.length}` },
+              {
+                label: 'Best word',
+                value: topWordEntry ? `${topWordEntry.word.toUpperCase()} (${topWordEntry.points})` : '\u2014',
+                tone: 'good' as const,
+              },
+              { label: 'Longest word', value: bestLen > 0 ? `${bestLen} letters` : '\u2014' },
+            ],
+          },
+          ...(stats
+            ? [{
+                caption: 'ALL TIME',
+                rows: [
+                  ...(isDaily && dailyStats
+                    ? [
+                        { label: 'Daily streak', value: `${dailyStats.streak ?? 0}` },
+                        { label: 'Best streak', value: `${dailyStats.bestStreak ?? 0}` },
+                      ]
+                    : []),
+                  { label: 'High score', value: stats.highScore.toLocaleString() },
+                  { label: 'Games played', value: `${stats.gamesPlayed}` },
+                  { label: 'Total words', value: stats.totalWordsFound.toLocaleString() },
+                  { label: 'Best in one game', value: `${stats.bestWordsInGame}` },
+                ],
+              }]
+            : []),
+        ]}
+        extra={
+          <>
+            {wordList}
+            <WordReportPrompt />
+          </>
+        }
+        countdown={isDaily ? { label: 'NEXT DAILY IN', value: dailyCountdown } : null}
+        onMainMenu={handleBackToMenu}
+        onPlayAgain={isDaily ? undefined : handlePlayAgain}
+        onShare={handleShareResult}
+        shareLabel="Share Result"
+      />
     );
   }
 
@@ -1048,7 +883,6 @@ export default function GameScreen() {
                         streak: dailyStats.streak,
                       }));
                     }
-                    setShowDailyPopup(true);
                     setScreen('results');
                   }
                 : startDailyGame
@@ -1384,23 +1218,21 @@ const styles = StyleSheet.create({
   },
 
   // ── Results screen ──
-  carouselPage: {
-    flex: 1,
-    paddingTop: 12,
-  },
-  resultsPageContent: {
+  wordListToggle: {
+    borderWidth: 2,
+    borderRadius: 12,
+    paddingVertical: 10,
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingBottom: 30,
   },
-  resultsCard: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: 18,
-    padding: 8,
+  wordListToggleText: { fontSize: 14, fontWeight: '800' },
+  wordListRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    paddingVertical: 4,
   },
-  resultsDivider: { height: 1, marginVertical: 12, opacity: 0.35 },
-  resultsSectionTitle: { fontSize: 13, fontWeight: '900', marginBottom: 8, textAlign: 'center', letterSpacing: 1 },
+  wordListWord: { fontSize: 14, fontWeight: '700' },
+  wordListPoints: { fontSize: 13, fontWeight: '600' },
   // Results page — Wordle/Hangman card style
   resultsPageHeader: {
     flexDirection: 'row',
@@ -1410,50 +1242,10 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 10,
   },
-  resultsHeaderSpacer: { width: 22 },
-  resultsCloseIconButton: { width: 22, alignItems: 'flex-end' },
-  brand: { textAlign: 'center', fontSize: 12, fontWeight: '900', letterSpacing: 2, marginBottom: 6 },
-  gameOverTitle: { textAlign: 'center', fontSize: 22, fontWeight: '900', marginBottom: 4 },
-  gameOverSubtitle: { textAlign: 'center', fontSize: 14, fontWeight: '600', marginBottom: 4 },
-  statsRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 },
-  statPill: { borderWidth: 2, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12, minWidth: 120, alignItems: 'center', justifyContent: 'center' },
-  statPillLabel: { fontSize: 11, fontWeight: '800', opacity: 0.8, marginBottom: 2 },
-  statPillValue: { fontSize: 14, fontWeight: '900', textAlign: 'center' },
-  buttonRow: { flexDirection: 'row', justifyContent: 'center', width: '100%', paddingHorizontal: 26, gap: 10, marginTop: 24 },
-  primaryButton: { borderWidth: 2, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, minWidth: 120, alignItems: 'center' },
-  primaryButtonFullWidth: { width: '100%', paddingVertical: 12, minWidth: undefined },
-  primaryButtonText: { fontSize: 13, fontWeight: '900', letterSpacing: 1 },
-  shareButton: { marginTop: 18, marginHorizontal: 26, borderRadius: 999, paddingVertical: 12, paddingHorizontal: 20, alignItems: 'center', backgroundColor: '#22c55e' },
-  shareButtonInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  shareButtonText: { fontSize: 15, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
-  menuButton: { paddingHorizontal: 40, paddingVertical: 15, borderRadius: 25, borderWidth: 2, width: '100%', alignItems: 'center' },
-  menuButtonText: { fontSize: 16, fontWeight: '600' },
 
   // Words page
   wordsPageTitle: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 4 },
-  wordsPageSubtitle: { fontSize: 14, textAlign: 'center', marginBottom: 15 },
-  wordsList: { flex: 1, paddingHorizontal: 15 },
-  wordsListContent: { paddingBottom: 20 },
-  wordItem: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    margin: 4,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  wordText: { fontSize: 16, fontWeight: '600' },
-  wordScore: { fontSize: 12 },
-  noWordsText: { fontSize: 15, textAlign: 'center', marginTop: 30 },
 
   // Page indicator
   pageIndicatorContainer: { alignItems: 'center', paddingVertical: 12, paddingBottom: 20 },
-  pageIndicatorLabels: { flexDirection: 'row', justifyContent: 'center', gap: 40, marginBottom: 8 },
-  pageIndicatorLabel: { fontSize: 12, fontWeight: '500' },
-  pageIndicator: { flexDirection: 'row', justifyContent: 'center', gap: 8 },
-  pageDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.2)' },
-  pageDotActive: { backgroundColor: COLORS.accent },
-  swipeHintText: { fontSize: 13, marginTop: 10, fontStyle: 'italic' },
 });
