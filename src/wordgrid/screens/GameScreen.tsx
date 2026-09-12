@@ -1234,18 +1234,8 @@ const styles = StyleSheet.create({
   wordListWord: { fontSize: 14, fontWeight: '700' },
   wordListPoints: { fontSize: 13, fontWeight: '600' },
   // Results page — Wordle/Hangman card style
-  resultsPageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
 
   // Words page
-  wordsPageTitle: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 4 },
 
   // Page indicator
-  pageIndicatorContainer: { alignItems: 'center', paddingVertical: 12, paddingBottom: 20 },
 });

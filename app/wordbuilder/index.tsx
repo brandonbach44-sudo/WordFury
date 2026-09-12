@@ -2256,9 +2256,6 @@ const styles = StyleSheet.create({
   },
 
   // Game Over Screen
-  gameOverContainer: {
-    flex: 1,
-  },
   wordListToggle: {
     borderWidth: 2,
     borderRadius: 12,
@@ -2275,12 +2272,6 @@ const styles = StyleSheet.create({
   wordListWord: { fontSize: 14, fontWeight: '700' },
   wordListPoints: { fontSize: 13, fontWeight: '600' },
   // Results card (Wordle-style)
-  resultsCard: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: 18,
-    padding: 8,
-  },
 
   achievementCardLocked: { opacity: 0.5 },
   achievementTextLocked: { opacity: 0.7 },

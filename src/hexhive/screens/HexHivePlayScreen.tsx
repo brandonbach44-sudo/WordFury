@@ -643,9 +643,6 @@ const styles = StyleSheet.create({
 
   // Result overlay — mirrors Wordle's full-page WordleResultOverlay layout/colors.
   // Rendered inside a native Modal, so this just needs to fill it.
-  overlay: {
-    flex: 1,
-  },
   title2: { textAlign: 'center', fontSize: 22, fontWeight: '900', marginBottom: 4, marginTop: 12 },
   subtitle: { textAlign: 'center', fontSize: 14, fontWeight: '600', marginBottom: 12 },
 });
