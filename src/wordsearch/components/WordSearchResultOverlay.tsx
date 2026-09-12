@@ -11,14 +11,13 @@
 // remembering to keep it in sync by hand.
 
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { Eye, EyeOff, Share2, X } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Eye, EyeOff } from 'lucide-react-native';
 
 import { useTheme } from '../../shared/ThemeContext';
 import { useSemanticColors } from '../../shared/semanticColors';
 import { AchievementPopup, AchievementLike } from '../../shared/AchievementPopup';
-import { COLORS } from '../../shared/theme';
+import { ResultsScreen } from '../../shared/ResultsScreen';
 import { DIRECTION_VECTORS, type PlacedWord } from '../utils/generator';
 import type { WordSearchStats } from '../utils/wsStorage';
 import type { WSAchievement } from '../utils/wsAchievements';
@@ -80,52 +79,6 @@ function formatCountdown(totalSeconds: number): string {
   return `${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m ${sec.toString().padStart(2, '0')}s`;
 }
 
-const StatPill = ({
-  label,
-  value,
-  textColor,
-  borderColor,
-  backgroundColor,
-}: {
-  label: string;
-  value: string;
-  textColor: string;
-  borderColor: string;
-  backgroundColor: string;
-}) => (
-  <View style={[styles.statPill, { borderColor, backgroundColor }]}>
-    <Text style={[styles.statPillLabel, { color: textColor }]}>{label}</Text>
-    <Text style={[styles.statPillValue, { color: textColor }]}>{value}</Text>
-  </View>
-);
-
-const PrimaryButton = ({
-  label,
-  onPress,
-  borderColor,
-  textColor,
-  backgroundColor,
-  fullWidth,
-}: {
-  label: string;
-  onPress: () => void;
-  borderColor: string;
-  textColor: string;
-  backgroundColor: string;
-  fullWidth?: boolean;
-}) => (
-  <Pressable
-    style={({ pressed }) => [
-      styles.primaryButton,
-      fullWidth && styles.primaryButtonFullWidth,
-      { borderColor, backgroundColor, opacity: pressed ? 0.75 : 1 },
-    ]}
-    onPress={onPress}
-  >
-    <Text style={[styles.primaryButtonText, { color: textColor }]}>{label}</Text>
-  </Pressable>
-);
-
 const WordSearchResultOverlay: React.FC<Props> = ({
   visible,
   mode,
@@ -149,7 +102,6 @@ const WordSearchResultOverlay: React.FC<Props> = ({
   // the single screen whose whole job is showing how you did. Both fills now
   // come from the shared semantic palette, so Color Blind Mode reaches them.
   const semantic = useSemanticColors();
-  const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const isDaily = mode === 'daily';
   const [showAnswerKey, setShowAnswerKey] = useState(false);
@@ -166,7 +118,6 @@ const WordSearchResultOverlay: React.FC<Props> = ({
   const canShowAnswerKey = !!puzzleGrid && !!puzzleWords && !foundWordsUnknown;
   const foundSet = new Set(foundWordTexts ?? []);
 
-  const BG = background.backgroundColor ?? '#f9f5ec';
   const TEXT = background.textColor ?? '#111827';
   const SUBTEXT = background.secondaryText ?? '#6b7280';
   const CARD = background.cardColor ?? '#ffffff';
@@ -231,230 +182,153 @@ const WordSearchResultOverlay: React.FC<Props> = ({
   // Same reasoning as every other game's result overlay — Modal instead of
   // an absolutely-positioned View so this always covers the full screen
   // exactly the same way, regardless of the parent play screen's layout.
-  return (
-    <Modal
-      visible={visible}
-      transparent={false}
-      animationType="slide"
-      statusBarTranslucent
-      presentationStyle="overFullScreen"
-      onRequestClose={onClose}
-    >
-      <View style={[styles.overlay, { backgroundColor: BG }]}>
-        <View style={[styles.pageHeader, { borderColor: BORDER, paddingTop: insets.top + 10 }]}>
-          <View style={styles.headerSpacer} />
-          <Text style={[styles.brand, { color: SUBTEXT }]}>WORD SEARCH</Text>
-          <Pressable
-            style={({ pressed }) => [styles.closeIconButton, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={onClose}
-            hitSlop={16}
-          >
-            <X size={22} color={SUBTEXT} />
-          </Pressable>
-        </View>
-
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
-          showsVerticalScrollIndicator={false}
+  const answerKey = canShowAnswerKey ? (
+    <View style={{ marginTop: 4 }}>
+      <>
+        <View style={[styles.divider, { backgroundColor: BORDER }]} />
+        <Pressable
+          style={({ pressed }) => [
+            styles.answerKeyToggle,
+            { borderColor: BORDER, backgroundColor: CARD, opacity: pressed ? 0.75 : 1 },
+          ]}
+          onPress={() => setShowAnswerKey((v) => !v)}
         >
-          <View style={styles.card}>
-            <Text style={[styles.title, { color: TEXT }]}>{title}</Text>
-            <Text style={[styles.subtitle, { color: SUBTEXT }]}>{subtitle}</Text>
+          {showAnswerKey ? <EyeOff size={16} color={TEXT} /> : <Eye size={16} color={TEXT} />}
+          <Text style={[styles.answerKeyToggleText, { color: TEXT }]}>
+            {showAnswerKey ? 'Hide Answer Key' : 'Show Answer Key'}
+          </Text>
+        </Pressable>
 
-            <View style={[styles.themePill, { borderColor: COLORS.accent }]}>
-              <Text style={[styles.themePillText, { color: COLORS.accent }]}>
-                {themeName}
-                {difficulty ? ` · ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}${resultData.multiplier > 1 ? ` · ${resultData.multiplier}×` : ''}` : ''}
-              </Text>
-            </View>
-
-            <View style={[styles.divider, { backgroundColor: BORDER }]} />
-            <Text style={[styles.sectionTitle, { color: TEXT }]}>This game</Text>
-            <View style={styles.statsRow}>
-              <StatPill label="Found" value={foundWordsUnknown ? '—' : `${resultData.foundWords}/${resultData.totalWords}`} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-              <StatPill label="Time" value={resultData.timeString} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-            </View>
-            <View style={styles.statsRow}>
-              <StatPill label="Score" value={resultData.score.toLocaleString()} textColor={COLORS.accent} borderColor={BORDER} backgroundColor={CARD} />
-              <StatPill
-                label="Complete"
-                value={foundWordsUnknown ? '—' : `${Math.round((resultData.foundWords / Math.max(resultData.totalWords, 1)) * 100)}%`}
-                textColor={resultData.allFound ? COLORS.accent : TEXT}
-                borderColor={BORDER}
-                backgroundColor={CARD}
-              />
-            </View>
-
-            {resultData.allFound && (
-              <>
-                <View style={[styles.divider, { backgroundColor: BORDER }]} />
-                <Text style={[styles.sectionTitle, { color: TEXT }]}>Score breakdown</Text>
-                <View style={styles.statsRow}>
-                  <StatPill label="Words" value={`${resultData.score - resultData.timeBonus} pts`} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-                  <StatPill label="Time Bonus" value={`+${resultData.timeBonus}`} textColor={COLORS.accent} borderColor={BORDER} backgroundColor={CARD} />
-                </View>
-                {resultData.multiplier > 1 && (
-                  <View style={styles.statsRow}>
-                    <StatPill label="Multiplier" value={`${resultData.multiplier}×`} textColor="#f59e0b" borderColor={BORDER} backgroundColor={CARD} />
-                  </View>
-                )}
-              </>
-            )}
-
-            {lifetimeStats && lifetimeStats.gamesPlayed > 0 && (
-              <>
-                <View style={[styles.divider, { backgroundColor: BORDER }]} />
-                <Text style={[styles.sectionTitle, { color: TEXT }]}>Your stats</Text>
-                <View style={styles.statsRow}>
-                  <StatPill label="Best Score" value={lifetimeStats.bestScore.toLocaleString()} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-                  <StatPill label="Streak" value={`${lifetimeStats.currentStreak}`} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-                </View>
-                <View style={styles.statsRow}>
-                  <StatPill label="Games" value={`${lifetimeStats.gamesPlayed}`} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-                  <StatPill label="Words Found" value={lifetimeStats.totalWordsFound.toLocaleString()} textColor={TEXT} borderColor={BORDER} backgroundColor={CARD} />
-                </View>
-              </>
-            )}
-
-            {isDaily && nextDailySecondsRemaining != null && nextDailySecondsRemaining > 0 && (
-              <>
-                <View style={[styles.divider, { backgroundColor: BORDER }]} />
-                <Text style={[styles.countdownLabel, { color: SUBTEXT }]}>Next Daily in</Text>
-                <Text style={[styles.countdownValue, { color: TEXT }]}>
-                  {formatCountdown(nextDailySecondsRemaining)}
-                </Text>
-              </>
-            )}
-
-            {canShowAnswerKey && (
-              <>
-                <View style={[styles.divider, { backgroundColor: BORDER }]} />
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.answerKeyToggle,
-                    { borderColor: BORDER, backgroundColor: CARD, opacity: pressed ? 0.75 : 1 },
-                  ]}
-                  onPress={() => setShowAnswerKey((v) => !v)}
-                >
-                  {showAnswerKey ? <EyeOff size={16} color={TEXT} /> : <Eye size={16} color={TEXT} />}
-                  <Text style={[styles.answerKeyToggleText, { color: TEXT }]}>
-                    {showAnswerKey ? 'Hide Answer Key' : 'Show Answer Key'}
-                  </Text>
-                </Pressable>
-
-                {showAnswerKey && (
-                  <View style={styles.answerKeyWrap}>
-                    <View style={styles.answerKeyLegend}>
-                      <View style={styles.legendItem}>
-                        <View style={[styles.legendSwatch, { backgroundColor: semantic.correct }]} />
-                        <Text style={[styles.legendText, { color: SUBTEXT }]}>Found</Text>
-                      </View>
-                      <View style={styles.legendItem}>
-                        <View style={[styles.legendSwatch, { backgroundColor: semantic.wrong }]} />
-                        <Text style={[styles.legendText, { color: SUBTEXT }]}>Missed</Text>
-                      </View>
-                    </View>
-                    {(() => {
-                      const grid = puzzleGrid!;
-                      const cols = grid[0]?.length ?? 1;
-                      const cellSize = Math.max(14, Math.min(26, Math.floor((Math.min(windowWidth, 420) - 56) / cols)));
-
-                      // Cell -> color, missed words drawn after found words so
-                      // an intersection between a found and missed word still
-                      // reads clearly as "missed" (the more useful signal).
-                      const cellColor = new Map<string, string>();
-                      for (const w of puzzleWords!) {
-                        if (!foundSet.has(w.word)) continue;
-                        for (const c of wordCells(w)) cellColor.set(`${c.row},${c.col}`, semantic.correct);
-                      }
-                      for (const w of puzzleWords!) {
-                        if (foundSet.has(w.word)) continue;
-                        for (const c of wordCells(w)) cellColor.set(`${c.row},${c.col}`, semantic.wrong);
-                      }
-
-                      return (
-                        <View style={[styles.answerKeyGrid, { borderColor: BORDER }]}>
-                          {grid.map((row, rIdx) => (
-                            <View key={rIdx} style={{ flexDirection: 'row' }}>
-                              {row.map((letter, cIdx) => {
-                                const fill = cellColor.get(`${rIdx},${cIdx}`);
-                                return (
-                                  <View
-                                    key={cIdx}
-                                    style={[
-                                      styles.answerKeyCell,
-                                      {
-                                        width: cellSize,
-                                        height: cellSize,
-                                        backgroundColor: fill ? `${fill}33` : CARD,
-                                        borderColor: BORDER,
-                                      },
-                                    ]}
-                                  >
-                                    <Text
-                                      style={[
-                                        styles.answerKeyCellText,
-                                        { fontSize: Math.max(8, cellSize * 0.42), color: fill ?? TEXT },
-                                      ]}
-                                    >
-                                      {letter}
-                                    </Text>
-                                  </View>
-                                );
-                              })}
-                            </View>
-                          ))}
-                        </View>
-                      );
-                    })()}
-                  </View>
-                )}
-              </>
-            )}
-
-            {/* Buttons — Play Again only outside Daily (one attempt per day),
-                same rule as every other game's results screen. Main Menu
-                goes back to Word Search's own hub, not the app home. This
-                row is now identical in structure to every other game's
-                result overlay, so Main Menu can't silently go missing. */}
-            <View style={styles.buttonRow}>
-              <PrimaryButton
-                label="Main Menu"
-                onPress={onGoHome}
-                borderColor={BORDER}
-                textColor={TEXT}
-                backgroundColor={CARD}
-                fullWidth={isDaily}
-              />
-              {!isDaily && (
-                <PrimaryButton
-                  label="Play Again"
-                  onPress={onPlayAgain}
-                  borderColor={BORDER}
-                  textColor={TEXT}
-                  backgroundColor={CARD}
-                />
-              )}
-            </View>
-
-            <Pressable style={({ pressed }) => [styles.shareButton, { opacity: pressed ? 0.75 : 1 }]} onPress={handleShare}>
-              <View style={styles.shareButtonInner}>
-                <Share2 size={18} color="#fff" />
-                <Text style={styles.shareButtonText}>Share Result</Text>
+        {showAnswerKey && (
+          <View style={styles.answerKeyWrap}>
+            <View style={styles.answerKeyLegend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendSwatch, { backgroundColor: semantic.correct }]} />
+                <Text style={[styles.legendText, { color: SUBTEXT }]}>Found</Text>
               </View>
-            </Pressable>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendSwatch, { backgroundColor: semantic.wrong }]} />
+                <Text style={[styles.legendText, { color: SUBTEXT }]}>Missed</Text>
+              </View>
+            </View>
+            {(() => {
+              const grid = puzzleGrid!;
+              const cols = grid[0]?.length ?? 1;
+              const cellSize = Math.max(14, Math.min(26, Math.floor((Math.min(windowWidth, 420) - 56) / cols)));
+
+              // Cell -> color, missed words drawn after found words so
+              // an intersection between a found and missed word still
+              // reads clearly as "missed" (the more useful signal).
+              const cellColor = new Map<string, string>();
+              for (const w of puzzleWords!) {
+                if (!foundSet.has(w.word)) continue;
+                for (const c of wordCells(w)) cellColor.set(`${c.row},${c.col}`, semantic.correct);
+              }
+              for (const w of puzzleWords!) {
+                if (foundSet.has(w.word)) continue;
+                for (const c of wordCells(w)) cellColor.set(`${c.row},${c.col}`, semantic.wrong);
+              }
+
+              return (
+                <View style={[styles.answerKeyGrid, { borderColor: BORDER }]}>
+                  {grid.map((row, rIdx) => (
+                    <View key={rIdx} style={{ flexDirection: 'row' }}>
+                      {row.map((letter, cIdx) => {
+                        const fill = cellColor.get(`${rIdx},${cIdx}`);
+                        return (
+                          <View
+                            key={cIdx}
+                            style={[
+                              styles.answerKeyCell,
+                              {
+                                width: cellSize,
+                                height: cellSize,
+                                backgroundColor: fill ? `${fill}33` : CARD,
+                                borderColor: BORDER,
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.answerKeyCellText,
+                                { fontSize: Math.max(8, cellSize * 0.42), color: fill ?? TEXT },
+                              ]}
+                            >
+                              {letter}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ))}
+                </View>
+              );
+            })()}
           </View>
-          <View style={{ height: 30 }} />
-        </ScrollView>
-        <AchievementPopup
-          achievement={achievement}
-          onDismiss={onDismissAchievement ?? (() => {})}
-          backgroundColor={CARD}
-          textColor={TEXT}
-        />
-      </View>
-    </Modal>
+        )}
+      </>
+    </View>
+  ) : null;
+
+
+  return (
+    <>
+      <ResultsScreen
+        visible={visible}
+        gameName="WORD SEARCH"
+        onClose={onClose}
+        title={title}
+        subtitle={subtitle}
+        badge={`${themeName}${difficulty ? ` \u00b7 ${difficulty.charAt(0).toUpperCase()}${difficulty.slice(1)}` : ''}${resultData.multiplier > 1 ? ` \u00b7 ${resultData.multiplier}\u00d7` : ''}`}
+        cells={[
+          { label: 'FOUND', value: foundWordsUnknown ? '\u2014' : `${resultData.foundWords}/${resultData.totalWords}` },
+          { label: 'TIME', value: resultData.timeString },
+          { label: 'SCORE', value: resultData.score.toLocaleString(), headline: true },
+        ]}
+        groups={[
+          {
+            caption: 'HOW THAT SCORE HAPPENED',
+            rows: [
+              { label: 'Words', value: (resultData.score - resultData.timeBonus).toLocaleString() },
+              ...(resultData.timeBonus > 0
+                ? [{ label: 'Time bonus', value: `+${resultData.timeBonus}`, tone: 'good' as const }]
+                : []),
+              ...(resultData.multiplier > 1
+                ? [{ label: 'Challenge multiplier', value: `\u00d7${resultData.multiplier}`, tone: 'warn' as const }]
+                : []),
+              { label: 'TOTAL', value: resultData.score.toLocaleString(), total: true },
+            ],
+          },
+          ...(lifetimeStats
+            ? [{
+                caption: 'ALL TIME',
+                rows: [
+                  { label: 'Best score', value: lifetimeStats.bestScore.toLocaleString() },
+                  { label: 'Streak', value: `${lifetimeStats.currentStreak} ${lifetimeStats.currentStreak === 1 ? 'day' : 'days'}` },
+                  { label: 'Games played', value: `${lifetimeStats.gamesPlayed}` },
+                  { label: 'Words found', value: lifetimeStats.totalWordsFound.toLocaleString() },
+                ],
+              }]
+            : []),
+        ]}
+        countdown={
+          isDaily && nextDailySecondsRemaining != null && nextDailySecondsRemaining > 0
+            ? { label: 'NEXT DAILY IN', value: formatCountdown(nextDailySecondsRemaining) }
+            : null
+        }
+        extra={answerKey}
+        onMainMenu={onGoHome}
+        onPlayAgain={isDaily ? undefined : onPlayAgain}
+        onShare={handleShare}
+        shareLabel="Share Result"
+      />
+      <AchievementPopup
+        achievement={achievement}
+        onDismiss={onDismissAchievement ?? (() => {})}
+        backgroundColor={CARD}
+        textColor={TEXT}
+      />
+    </>
   );
 };
 
