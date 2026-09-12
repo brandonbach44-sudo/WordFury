@@ -628,7 +628,7 @@ export default function Home() {
         textColor={background.textColor}
         secondaryText={background.secondaryText}
         borderColor={background.borderColor}
-        destructiveColor={COLORS.accent}
+        destructiveColor={background.accentColor}
       />
     </View>
   );

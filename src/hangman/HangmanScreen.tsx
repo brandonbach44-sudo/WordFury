@@ -759,7 +759,7 @@ export default function HangmanScreen() {
             <Text style={[styles.infoLabel, { color: background.secondaryText }]}>
               {playingDaily ? 'Daily Challenge' : 'Category'}
             </Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.infoValue, { color: COLORS.accent }]}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.infoValue, { color: background.accentColor }]}>
               {category}
             </Text>
           </View>
@@ -794,11 +794,11 @@ export default function HangmanScreen() {
         <View style={styles.keyboardContainer}>
           {isPlaying && (
             <TouchableOpacity
-              style={[styles.guessWordButton, { borderColor: COLORS.accent }]}
+              style={[styles.guessWordButton, { borderColor: background.accentColor }]}
               onPress={() => { setGuessInput(''); setShowGuessModal(true); }}
               activeOpacity={0.7}
             >
-              <Text style={[styles.guessWordButtonText, { color: COLORS.accent }]}>
+              <Text style={[styles.guessWordButtonText, { color: background.accentColor }]}>
                 Guess the Word
               </Text>
             </TouchableOpacity>
@@ -1052,31 +1052,31 @@ export default function HangmanScreen() {
               How to Play
             </Text>
             <View style={styles.ruleItem}>
-              <Text style={[styles.ruleNumber, { color: COLORS.accent }]}>1</Text>
+              <Text style={[styles.ruleNumber, { color: background.accentColor }]}>1</Text>
               <Text style={[styles.ruleText, { color: background.secondaryText }]}>
                 Select a letter from the keyboard
               </Text>
             </View>
             <View style={styles.ruleItem}>
-              <Text style={[styles.ruleNumber, { color: COLORS.accent }]}>2</Text>
+              <Text style={[styles.ruleNumber, { color: background.accentColor }]}>2</Text>
               <Text style={[styles.ruleText, { color: background.secondaryText }]}>
                 Press ENTER to submit your guess
               </Text>
             </View>
             <View style={styles.ruleItem}>
-              <Text style={[styles.ruleNumber, { color: COLORS.accent }]}>3</Text>
+              <Text style={[styles.ruleNumber, { color: background.accentColor }]}>3</Text>
               <Text style={[styles.ruleText, { color: background.secondaryText }]}>
                 Correct letters appear in the word
               </Text>
             </View>
             <View style={styles.ruleItem}>
-              <Text style={[styles.ruleNumber, { color: COLORS.accent }]}>4</Text>
+              <Text style={[styles.ruleNumber, { color: background.accentColor }]}>4</Text>
               <Text style={[styles.ruleText, { color: background.secondaryText }]}>
                 Wrong guesses add parts to the hangman
               </Text>
             </View>
             <View style={styles.ruleItem}>
-              <Text style={[styles.ruleNumber, { color: COLORS.accent }]}>5</Text>
+              <Text style={[styles.ruleNumber, { color: background.accentColor }]}>5</Text>
               <Text style={[styles.ruleText, { color: background.secondaryText }]}>
                 Guess the word before 6 wrong guesses!
               </Text>
@@ -1140,7 +1140,7 @@ export default function HangmanScreen() {
               <Text style={[styles.statsSectionTitle, { color: background.textColor, marginTop: 24 }]}>Daily History</Text>
               <DailyCalendar
                 history={dailyHistory}
-                accentColor={COLORS.accent}
+                accentColor={background.accentColor}
                 textColor={background.textColor}
                 secondaryTextColor={background.secondaryText}
                 cardColor={background.cardColor}

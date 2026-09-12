@@ -18,7 +18,6 @@ import { useTheme } from '../../shared/ThemeContext';
 import { useSemanticColors } from '../../shared/semanticColors';
 import { recordRejectedWord } from '../../shared/wordReports';
 import { HapticManager } from '../../shared/HapticManager';
-import { COLORS } from '../../shared/theme';
 import { AchievementPopup } from '../../shared/AchievementPopup';
 import { ConfirmModal } from '../../shared/ConfirmModal';
 import { maybeRequestReview } from '../../shared/reviewPrompt';

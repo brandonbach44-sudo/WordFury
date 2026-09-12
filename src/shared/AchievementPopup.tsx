@@ -5,6 +5,7 @@
 // own Achievement type works without adaptation.
 import React, { useEffect, useRef } from 'react';
 import { AchievementIcon } from './AchievementIcon';
+import { useTheme } from './ThemeContext';
 import {
   View,
   Text,
@@ -36,6 +37,7 @@ export const AchievementPopup: React.FC<AchievementPopupProps> = ({
   backgroundColor = '#ffffff',
   textColor = '#2c2416',
 }) => {
+  const { background } = useTheme();
   const slideAnim = useRef(new Animated.Value(-150)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -108,7 +110,7 @@ export const AchievementPopup: React.FC<AchievementPopupProps> = ({
         activeOpacity={0.9}
       >
         <View style={styles.header}>
-          <Text style={styles.unlockLabel}>Achievement Unlocked!</Text>
+          <Text style={[styles.unlockLabel, { color: background.accentColor }]}>Achievement Unlocked!</Text>
         </View>
 
         <View style={styles.content}>

@@ -24,7 +24,6 @@ import { Check, FlagOff, Lightbulb, Shuffle, SkipForward } from 'lucide-react-na
 import { useTheme } from '../../shared/ThemeContext';
 import { useSemanticColors } from '../../shared/semanticColors';
 import { HapticManager } from '../../shared/HapticManager';
-import { COLORS } from '../../shared/theme';
 import { AchievementPopup } from '../../shared/AchievementPopup';
 import { ConfirmModal } from '../../shared/ConfirmModal';
 import { GameTile } from '../../shared/GameTile';

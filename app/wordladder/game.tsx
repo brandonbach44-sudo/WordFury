@@ -6,7 +6,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useTheme } from '../../src/shared/ThemeContext';
-import { COLORS } from '../../src/shared/theme';
 import { generatePracticeLadder, type LadderDifficulty, type LadderPuzzle } from '../../src/wordladder/utils/generator';
 import LadderPlayScreen from '../../src/wordladder/screens/LadderPlayScreen';
 import { loadQuickPlayProgress, clearQuickPlayProgress, type QuickPlayProgressState } from '../../src/wordladder/utils/ladderStorage';
@@ -60,7 +59,7 @@ export default function WordLadderGameRoute() {
   if (!puzzle) {
     return (
       <View style={{ flex: 1, backgroundColor: background.backgroundColor, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
+        <ActivityIndicator color={background.accentColor} size="large" />
       </View>
     );
   }

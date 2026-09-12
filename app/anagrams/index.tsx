@@ -273,7 +273,7 @@ export default function AnagramsEntryScreen() {
 
               {dailyPlayed && dailyLock && (
                 <View style={styles.dailyCompletedInfo}>
-                  <Text style={styles.dailyCompletedScore}>{dailyLock.totalScore}</Text>
+                  <Text style={[styles.dailyCompletedScore, { color: background.accentColor }]}>{dailyLock.totalScore}</Text>
                   <Text style={[styles.dailyCompletedLabel, { color: background.secondaryText }]}>
                     {dailyLock.won ? 'All 5 solved' : 'Today\'s score'}
                   </Text>
@@ -374,7 +374,7 @@ export default function AnagramsEntryScreen() {
                 'Stuck? Skip a word — it just won\'t count toward your score',
               ].map((rule, i) => (
                 <View key={i} style={styles.ruleRow}>
-                  <Text style={[styles.ruleNum, { color: COLORS.accent }]}>{i + 1}</Text>
+                  <Text style={[styles.ruleNum, { color: background.accentColor }]}>{i + 1}</Text>
                   <Text style={[styles.ruleText, { color: background.secondaryText }]}>{rule}</Text>
                 </View>
               ))}
@@ -391,7 +391,7 @@ export default function AnagramsEntryScreen() {
           {/* ── STATS TAB ── */}
           <ScrollView style={{ width }} contentContainerStyle={styles.tabContent} showsVerticalScrollIndicator={false}>
             {loadingStats ? (
-              <ActivityIndicator color={COLORS.accent} style={{ marginTop: 20 }} />
+              <ActivityIndicator color={background.accentColor} style={{ marginTop: 20 }} />
             ) : combinedGames > 0 ? (
               <>
                 <Text style={[styles.sectionTitle, { color: background.textColor }]}>Daily Anagrams</Text>
@@ -435,7 +435,7 @@ export default function AnagramsEntryScreen() {
                 <View style={{ paddingHorizontal: 4, marginBottom: 8 }}>
                   <DailyCalendar
                     history={dailyHistory}
-                    accentColor={COLORS.accent}
+                    accentColor={background.accentColor}
                     textColor={background.textColor}
                     secondaryTextColor={background.secondaryText}
                     cardColor={background.cardColor}

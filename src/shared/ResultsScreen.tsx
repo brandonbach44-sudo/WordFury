@@ -113,9 +113,13 @@ export const ResultsScreen: React.FC<Props> = ({
   const SUBTEXT = background.secondaryText;
   const CARD = background.cardColor;
   const BORDER = background.borderColor;
+  const ACCENT = background.accentColor;
 
+  // Tone colours come from the theme, not the shared constant. The constant's
+  // green and amber are tuned for the dark themes and drop to about 1.2:1 on
+  // the saturated light backgrounds, which is not readable.
   const toneColor = (tone?: ResultRowTone) =>
-    tone === 'good' ? COLORS.accent : tone === 'warn' ? COLORS.warning : TEXT;
+    tone === 'good' ? ACCENT : tone === 'warn' ? COLORS.warning : TEXT;
 
   return (
     <Modal
@@ -155,8 +159,8 @@ export const ResultsScreen: React.FC<Props> = ({
             <Text style={[styles.subtitle, { color: SUBTEXT }]}>{subtitle}</Text>
           )}
           {!!badge && (
-            <View style={[styles.badge, { borderColor: COLORS.accent }]}>
-              <Text style={[styles.badgeText, { color: COLORS.accent }]} numberOfLines={1}>
+            <View style={[styles.badge, { borderColor: ACCENT }]}>
+              <Text style={[styles.badgeText, { color: ACCENT }]} numberOfLines={1}>
                 {badge}
               </Text>
             </View>
@@ -226,7 +230,7 @@ export const ResultsScreen: React.FC<Props> = ({
                     style={[
                       styles.rowValue,
                       { color: toneColor(row.tone) },
-                      row.total && [styles.rowValueTotal, { color: COLORS.accent }],
+                      row.total && [styles.rowValueTotal, { color: ACCENT }],
                     ]}
                     numberOfLines={1}
                   >

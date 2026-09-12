@@ -13,7 +13,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '../../src/shared/ThemeContext';
-import { COLORS } from '../../src/shared/theme';
 import { WORD_SEARCH_THEMES, type WordSearchThemeId } from '../../src/wordsearch/data/themes';
 import { DIFFICULTY_CONFIG, type Difficulty, type DifficultyConfig } from '../../src/wordsearch/utils/difficultyConfig';
 
@@ -95,7 +94,7 @@ const WordSearchPlayScreen: React.FC = () => {
           </View>
         ) : (
           <>
-            <View style={[styles.selectedCard, { backgroundColor: background.cardColor, borderColor: COLORS.accent }]}>
+            <View style={[styles.selectedCard, { backgroundColor: background.cardColor, borderColor: background.accentColor }]}>
               <Text style={[styles.selectedName, { color: background.textColor }]}>
                 {categoryTheme?.name}
               </Text>
@@ -122,7 +121,7 @@ const WordSearchPlayScreen: React.FC = () => {
                     <Text style={[styles.boardSize, { color: background.secondaryText }]}>
                       {config.description}
                     </Text>
-                    <Text style={[styles.pointsMultiplier, { color: COLORS.accent }]}>
+                    <Text style={[styles.pointsMultiplier, { color: background.accentColor }]}>
                       {config.multiplier}x Points
                     </Text>
                   </TouchableOpacity>

@@ -6,7 +6,6 @@ import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useTheme } from '../../src/shared/ThemeContext';
-import { COLORS } from '../../src/shared/theme';
 import { WORD_SEARCH_THEMES } from '../../src/wordsearch/data/themes';
 import PlayScreen from '../../src/wordsearch/PlayScreen';
 import { generatePuzzle, type PlacedWord , WordSearchPuzzle } from '../../src/wordsearch/utils/generator';
@@ -69,7 +68,7 @@ export default function WordSearchGameRoute() {
   if (!hydrated || !themeId || !difficulty || !puzzle) {
     return (
       <View style={{ flex: 1, backgroundColor: background.backgroundColor, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
+        <ActivityIndicator color={background.accentColor} size="large" />
       </View>
     );
   }

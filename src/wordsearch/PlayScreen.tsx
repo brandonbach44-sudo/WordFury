@@ -16,7 +16,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/shared/ThemeContext';
 import { HapticManager } from '../shared/HapticManager';
-import { COLORS } from '../../src/shared/theme';
 import { useSemanticColors } from '../shared/semanticColors';
 import { WORD_SEARCH_THEMES, type WordSearchThemeId } from '../../src/wordsearch/data/themes';
 import type { PlacedWord, WordSearchPuzzle } from '../../src/wordsearch/utils/generator';
@@ -709,14 +708,14 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
         <Text style={[styles.infoLabel, { color: background.secondaryText }]}>
           {isDaily ? 'Daily Challenge' : 'Theme'}
         </Text>
-        <Text style={[styles.themeName, { color: COLORS.accent }]}>{themeName}</Text>
+        <Text style={[styles.themeName, { color: background.accentColor }]}>{themeName}</Text>
       </View>
 
       {/* Info bar */}
       <View style={[styles.infoBar, { backgroundColor: background.cardColor, borderColor: background.borderColor }]}>
         <View style={styles.infoItem}>
           <Text style={[styles.infoLabel, { color: background.secondaryText }]}>Score</Text>
-          <Text style={[styles.infoValue, { color: COLORS.accent }]}>{gameState.score}</Text>
+          <Text style={[styles.infoValue, { color: background.accentColor }]}>{gameState.score}</Text>
         </View>
         <View style={[styles.infoDivider, { backgroundColor: background.borderColor }]} />
         <View style={styles.infoItem}>

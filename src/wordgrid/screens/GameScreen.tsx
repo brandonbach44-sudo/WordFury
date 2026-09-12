@@ -742,7 +742,7 @@ export default function GameScreen() {
           <Text style={[styles.timerText, { color: timerColor }, timeLeft <= 10 && styles.timerWarning]}>
             {formatTime(timeLeft)}
           </Text>
-          <Text style={[styles.scoreText, { color: COLORS.accent }]}>{score} pts</Text>
+          <Text style={[styles.scoreText, { color: background.accentColor }]}>{score} pts</Text>
         </View>
 
         {/* Spacer pushes grid toward middle/bottom for thumb reach */}
@@ -775,8 +775,8 @@ export default function GameScreen() {
           </Text>
           <View style={styles.foundWordsWrap}>
             {foundWords.slice(0, 24).map((item, index) => (
-              <View key={index} style={styles.foundWordBadge}>
-                <Text style={styles.foundWordText}>{item.word.toUpperCase()}</Text>
+              <View key={index} style={[styles.foundWordBadge, { borderColor: background.accentColor }]}>
+                <Text style={[styles.foundWordText, { color: background.accentColor }]}>{item.word.toUpperCase()}</Text>
               </View>
             ))}
           </View>
@@ -910,7 +910,7 @@ export default function GameScreen() {
                 'Score big with long words and rare letters (Q, Z, J, X)',
               ].map((rule, i) => (
                 <View key={i} style={styles.ruleItem}>
-                  <Text style={[styles.ruleNumber, { color: COLORS.accent }]}>{i + 1}</Text>
+                  <Text style={[styles.ruleNumber, { color: background.accentColor }]}>{i + 1}</Text>
                   <Text style={[styles.ruleText, { color: bg.secondaryText }]}>{rule}</Text>
                 </View>
               ))}
@@ -964,7 +964,7 @@ export default function GameScreen() {
             <View style={{ paddingHorizontal: 4, marginBottom: 8 }}>
               <DailyCalendar
                 history={dailyHistory}
-                accentColor={COLORS.accent}
+                accentColor={background.accentColor}
                 textColor={bg.textColor}
                 secondaryTextColor={bg.secondaryText}
                 cardColor={bg.cardColor}

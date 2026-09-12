@@ -44,6 +44,18 @@ export interface BackgroundOption {
   secondaryText: string;
   cardColor: string;
   borderColor: string;
+  // The green accent, darkened per theme so it actually reads on that
+  // background. COLORS.accent is only light enough for the two dark themes;
+  // on every light one it lands near 2:1, which is not readable text.
+  // Each value here clears 4.5:1 against both its background and a white card.
+  //
+  // The hue also shifts slightly per theme, by about three percent, so the green
+  // sits in each background rather than on top of it: cooler and bluer on Powder
+  // Blue and Periwinkle, warmer and more olive on Cream and Warm Sand. Sage is the
+  // one that shifts away from its background instead of toward it, because green
+  // on green blends. It stays one green family on purpose, since the accent marks
+  // correct answers and found words and that meaning has to carry across games.
+  accentColor: string;
   statusBar: 'light' | 'dark';
   isDark: boolean; // Used for dark mode detection
 }
@@ -59,6 +71,7 @@ export const COLOR_BACKGROUNDS: BackgroundOption[] = [
     secondaryText: '#6b5c4a',
     cardColor: '#ffffff',
     borderColor: '#8b7355',
+    accentColor: '#40775e',
     statusBar: 'dark',
     isDark: false,
   },
@@ -71,6 +84,7 @@ export const COLOR_BACKGROUNDS: BackgroundOption[] = [
     secondaryText: '#666666',
     cardColor: '#f5f5f5',
     borderColor: '#dddddd',
+    accentColor: '#46816e',
     statusBar: 'dark',
     isDark: false,
   },
@@ -83,6 +97,7 @@ export const COLOR_BACKGROUNDS: BackgroundOption[] = [
     secondaryText: '#5a5a6e',
     cardColor: '#ffffff',
     borderColor: '#d0d2d5',
+    accentColor: '#407769',
     statusBar: 'dark',
     isDark: false,
   },
@@ -95,6 +110,7 @@ export const COLOR_BACKGROUNDS: BackgroundOption[] = [
     secondaryText: '#5a6b5a',
     cardColor: '#ffffff',
     borderColor: '#9caf9c',
+    accentColor: '#3e7459',
     statusBar: 'dark',
     isDark: false,
   },
@@ -107,6 +123,7 @@ export const COLOR_BACKGROUNDS: BackgroundOption[] = [
     secondaryText: '#6b5a7a',
     cardColor: '#ffffff',
     borderColor: '#b89cc8',
+    accentColor: '#3d7169',
     statusBar: 'dark',
     isDark: false,
   },
@@ -119,6 +136,7 @@ export const COLOR_BACKGROUNDS: BackgroundOption[] = [
     secondaryText: '#7a6a58',
     cardColor: '#ffffff',
     borderColor: '#c4a882',
+    accentColor: '#3d7157',
     statusBar: 'dark',
     isDark: false,
   },
@@ -146,6 +164,7 @@ export const COLOR_BACKGROUNDS: BackgroundOption[] = [
     secondaryText: '#3c5568',
     cardColor: '#ffffff',
     borderColor: '#7ba3c0',
+    accentColor: '#325d58',
     statusBar: 'dark',
     isDark: false,
   },
@@ -158,6 +177,7 @@ export const COLOR_BACKGROUNDS: BackgroundOption[] = [
     secondaryText: '#683c43',
     cardColor: '#ffffff',
     borderColor: '#c48892',
+    accentColor: '#2e5645',
     statusBar: 'dark',
     isDark: false,
   },
@@ -170,6 +190,7 @@ export const COLOR_BACKGROUNDS: BackgroundOption[] = [
     secondaryText: '#3f3c68',
     cardColor: '#ffffff',
     borderColor: '#8b85c4',
+    accentColor: '#2d534e',
     statusBar: 'dark',
     isDark: false,
   },
@@ -182,6 +203,7 @@ export const COLOR_BACKGROUNDS: BackgroundOption[] = [
     secondaryText: '#888888',
     cardColor: '#16213e',
     borderColor: '#4ecca3',
+    accentColor: '#4ecca3',
     statusBar: 'light',
     isDark: true,
   },
@@ -194,6 +216,7 @@ export const COLOR_BACKGROUNDS: BackgroundOption[] = [
     secondaryText: '#7d8590',
     cardColor: '#161b22',
     borderColor: '#30363d',
+    accentColor: '#4ecca3',
     statusBar: 'light',
     isDark: true,
   },

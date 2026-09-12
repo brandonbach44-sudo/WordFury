@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useTheme } from '../../src/shared/ThemeContext';
-import { COLORS } from '../../src/shared/theme';
 import type { AnagramPuzzle } from '../../src/anagrams/utils/generator';
 import { generateDailyAnagrams } from '../../src/anagrams/utils/generator';
 import {
@@ -53,7 +52,7 @@ export default function AnagramsDailyScreen() {
   if (loading || !puzzle) {
     return (
       <View style={{ flex: 1, backgroundColor: background.backgroundColor, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
+        <ActivityIndicator color={background.accentColor} size="large" />
       </View>
     );
   }

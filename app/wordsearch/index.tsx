@@ -256,7 +256,7 @@ const WordSearchEntryScreen: React.FC = () => {
               {/* Score display — only when completed */}
               {dailyPlayed && dailyStats && (
                 <View style={styles.dailyCompletedInfo}>
-                  <Text style={styles.dailyCompletedScore}>{dailyStats.lastDailyScore}</Text>
+                  <Text style={[styles.dailyCompletedScore, { color: background.accentColor }]}>{dailyStats.lastDailyScore}</Text>
                   <Text style={[styles.dailyCompletedLabel, { color: background.secondaryText }]}>
                     {dailyStats.lastDailyResult === 'won' ? 'All words found' : 'Better luck tomorrow'}
                   </Text>
@@ -344,7 +344,7 @@ const WordSearchEntryScreen: React.FC = () => {
                 'Find all words to complete the puzzle',
               ].map((rule, i) => (
                 <View key={i} style={styles.ruleRow}>
-                  <Text style={[styles.ruleNum, { color: COLORS.accent }]}>{i + 1}</Text>
+                  <Text style={[styles.ruleNum, { color: background.accentColor }]}>{i + 1}</Text>
                   <Text style={[styles.ruleText, { color: background.secondaryText }]}>{rule}</Text>
                 </View>
               ))}
@@ -356,7 +356,7 @@ const WordSearchEntryScreen: React.FC = () => {
           {/* ── STATS TAB ── */}
           <ScrollView style={{ width }} contentContainerStyle={styles.tabContent} showsVerticalScrollIndicator={false}>
             {loadingStats ? (
-              <ActivityIndicator color={COLORS.accent} style={{ marginTop: 20 }} />
+              <ActivityIndicator color={background.accentColor} style={{ marginTop: 20 }} />
             ) : stats && stats.gamesPlayed > 0 ? (
               <>
                 {/* ── DAILY WORD SEARCH ── */}
@@ -380,7 +380,7 @@ const WordSearchEntryScreen: React.FC = () => {
                 <Text style={[styles.sectionTitle, { color: background.textColor, marginTop: 25 }]}>Daily History</Text>
                 <DailyCalendar
                   history={dailyHistory}
-                  accentColor={COLORS.accent}
+                  accentColor={background.accentColor}
                   textColor={background.textColor}
                   secondaryTextColor={background.secondaryText}
                   cardColor={background.cardColor}
