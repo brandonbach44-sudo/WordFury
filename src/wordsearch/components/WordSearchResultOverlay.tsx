@@ -51,7 +51,7 @@ type Props = {
   // Achievement toast rendered inside this Modal — see AchievementPopup:
   // native Modals always paint above plain views, so a toast mounted only
   // at the parent screen level would be hidden behind this overlay.
-  achievement?: AchievementLike | null;
+  achievements?: AchievementLike[];
   onDismissAchievement?: () => void;
   // Puzzle answer key — grid + every placed word, plus which of those the
   // player actually found. Used for the "Show Answer Key" reveal below.
@@ -90,7 +90,7 @@ const WordSearchResultOverlay: React.FC<Props> = ({
   onClose,
   onPlayAgain,
   onGoHome,
-  achievement = null,
+  achievements = [],
   onDismissAchievement,
   puzzleGrid,
   puzzleWords,
@@ -323,7 +323,7 @@ const WordSearchResultOverlay: React.FC<Props> = ({
         shareLabel="Share Result"
       />
       <AchievementPopup
-        achievement={achievement}
+        achievements={achievements}
         onDismiss={onDismissAchievement ?? (() => {})}
         backgroundColor={CARD}
         textColor={TEXT}

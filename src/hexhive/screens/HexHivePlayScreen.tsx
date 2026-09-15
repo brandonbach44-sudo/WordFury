@@ -421,8 +421,8 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
       <StatusBar barStyle={background.statusBar === 'light' ? 'light-content' : 'dark-content'} />
 
       <AchievementPopup
-        achievement={achievementQueue[0] ?? null}
-        onDismiss={() => setAchievementQueue((q) => q.slice(1))}
+        achievements={achievementQueue}
+        onDismiss={() => setAchievementQueue([])}
         backgroundColor={CARD}
         textColor={TEXT}
       />

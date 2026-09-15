@@ -32,7 +32,7 @@ type Props = {
   // native Modals always render above plain views, so a toast mounted only
   // at the parent screen level would be hidden behind this overlay whenever
   // both are visible at once, e.g. finishing the puzzle unlocks something).
-  achievement?: AchievementLike | null;
+  achievements?: AchievementLike[];
   onDismissAchievement?: () => void;
 };
 
@@ -69,7 +69,7 @@ const LadderResultOverlay: React.FC<Props> = ({
   onClose,
   onPlayAgain,
   onGoHome,
-  achievement = null,
+  achievements = [],
   onDismissAchievement,
 }) => {
   const { background } = useTheme();
@@ -167,7 +167,7 @@ const LadderResultOverlay: React.FC<Props> = ({
         shareLabel="Share Result"
       />
       <AchievementPopup
-        achievement={achievement}
+        achievements={achievements}
         onDismiss={onDismissAchievement ?? (() => {})}
         backgroundColor={CARD}
         textColor={TEXT}

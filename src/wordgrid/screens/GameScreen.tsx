@@ -203,7 +203,6 @@ export default function GameScreen() {
     (Achievement & { unlockedAt: string })[]
   >([]);
   const [pendingAchievements, setPendingAchievements] = useState<Achievement[]>([]);
-  const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
 
   useEffect(() => {
     loadWordGridStats().then(setStats);
@@ -213,14 +212,6 @@ export default function GameScreen() {
       .catch(() => {});
     getUnlockedAchievements().then(setUnlockedAchievements);
   }, []);
-
-  useEffect(() => {
-    if (!currentAchievement && pendingAchievements.length > 0) {
-      const [next, ...rest] = pendingAchievements;
-      setCurrentAchievement(next);
-      setPendingAchievements(rest);
-    }
-  }, [currentAchievement, pendingAchievements]);
 
   // ── Game mode & daily ─────────────────────────────────────────────────────
   const [gameMode, setGameMode] = useState<GameMode>('quick');
@@ -727,8 +718,8 @@ export default function GameScreen() {
         <StatusBar barStyle={bg.statusBar === 'dark' ? 'dark-content' : 'light-content'} />
 
         <AchievementPopup
-          achievement={currentAchievement}
-          onDismiss={() => setCurrentAchievement(null)}
+          achievements={pendingAchievements}
+          onDismiss={() => setPendingAchievements([])}
           backgroundColor={bg.cardColor}
           textColor={bg.textColor}
         />
@@ -794,8 +785,8 @@ export default function GameScreen() {
       <FallingLetters />
 
       <AchievementPopup
-        achievement={currentAchievement}
-        onDismiss={() => setCurrentAchievement(null)}
+        achievements={pendingAchievements}
+        onDismiss={() => setPendingAchievements([])}
         backgroundColor={bg.cardColor}
         textColor={bg.textColor}
       />

@@ -283,7 +283,6 @@ export default function HangmanScreen() {
   const [unlockedAchievements, setUnlockedAchievements] = useState<(Achievement & { unlockedAt: string })[]>([]);
   const [lockedAchievements, setLockedAchievements] = useState<Achievement[]>([]);
   const [pendingAchievements, setPendingAchievements] = useState<Achievement[]>([]);
-  const [currentPopupAchievement, setCurrentPopupAchievement] = useState<Achievement | null>(null);
 
   // Daily Challenge state
   const [dailyStats, setDailyStats] = useState<DailyChallengeStats | null>(null);
@@ -366,15 +365,7 @@ export default function HangmanScreen() {
     });
   }, []);
 
-  // Achievement popup queue
-  useEffect(() => {
-    if (pendingAchievements.length > 0 && !currentPopupAchievement) {
-      setCurrentPopupAchievement(pendingAchievements[0]);
-      setPendingAchievements((prev) => prev.slice(1));
-    }
-  }, [pendingAchievements, currentPopupAchievement]);
-
-  const handleAchievementDismiss = () => setCurrentPopupAchievement(null);
+  const handleAchievementDismiss = () => setPendingAchievements([]);
 
   // Save stats after regular (non-daily) game ends
   useEffect(() => {
@@ -737,7 +728,7 @@ export default function HangmanScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: background.backgroundColor }]}>
         <StatusBar barStyle={background.statusBar === 'light' ? 'light-content' : 'dark-content'} />
         <AchievementPopup
-          achievement={currentPopupAchievement}
+          achievements={pendingAchievements}
           onDismiss={handleAchievementDismiss}
           backgroundColor={background.cardColor}
           textColor={background.textColor}
@@ -880,7 +871,7 @@ export default function HangmanScreen() {
             onPlayAgain={handlePlayAgain}
             onBackToMenu={handleBackToModeSelect}
             onClose={() => setResultCardClosed(true)}
-            achievement={currentPopupAchievement}
+            achievements={pendingAchievements}
             onDismissAchievement={handleAchievementDismiss}
           />
         )}
@@ -898,7 +889,7 @@ export default function HangmanScreen() {
             maxAttempts={maxAttempts}
             onBackToMenu={handleCloseDailyPopup}
             onClose={() => setShowDailyPopup(false)}
-            achievement={currentPopupAchievement}
+            achievements={pendingAchievements}
             onDismissAchievement={handleAchievementDismiss}
           />
         )}
@@ -956,7 +947,7 @@ export default function HangmanScreen() {
       <StatusBar barStyle={background.statusBar === 'light' ? 'light-content' : 'dark-content'} />
       <FallingLetters />
       <AchievementPopup
-        achievement={currentPopupAchievement}
+        achievements={pendingAchievements}
         onDismiss={handleAchievementDismiss}
         backgroundColor={background.cardColor}
         textColor={background.textColor}

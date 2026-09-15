@@ -31,7 +31,7 @@ type Props = {
   shareText?: string;
   evaluationRows?: CellState[][];
   // Achievement toast to render inside this Modal — see AchievementPopup.
-  achievement?: AchievementLike | null;
+  achievements?: AchievementLike[];
   onDismissAchievement?: () => void;
 };
 
@@ -118,7 +118,7 @@ const WordleResultOverlay = ({
   nextDailySecondsRemaining,
   shareText,
   evaluationRows,
-  achievement = null,
+  achievements = [],
   onDismissAchievement,
 }: Props) => {
   const { background } = useTheme();
@@ -273,7 +273,7 @@ const WordleResultOverlay = ({
         shareLabel="Share Result"
       />
       <AchievementPopup
-        achievement={achievement}
+        achievements={achievements}
         onDismiss={onDismissAchievement ?? (() => {})}
         backgroundColor={CARD}
         textColor={TEXT}

@@ -17,7 +17,7 @@ type Props = {
   onBackToMenu: () => void;
   onClose: () => void;
   // Achievement toast to render inside this Modal — see AchievementPopup.
-  achievement?: AchievementLike | null;
+  achievements?: AchievementLike[];
   onDismissAchievement?: () => void;
 };
 
@@ -32,7 +32,7 @@ export const DailyChallengePopup: React.FC<Props> = ({
   maxAttempts,
   onBackToMenu,
   onClose,
-  achievement = null,
+  achievements = [],
   onDismissAchievement,
 }) => {
   const { background } = useTheme();
@@ -104,7 +104,7 @@ export const DailyChallengePopup: React.FC<Props> = ({
         shareLabel="Share Result"
       />
       <AchievementPopup
-        achievement={achievement}
+        achievements={achievements}
         onDismiss={onDismissAchievement ?? (() => {})}
         backgroundColor={CARD}
         textColor={TEXT}

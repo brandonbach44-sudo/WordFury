@@ -27,7 +27,7 @@ type Props = {
   onPlayAgain: () => void;
   onGoHome: () => void;
   // Achievement toast to render inside this Modal — see AchievementPopup.
-  achievement?: AchievementLike | null;
+  achievements?: AchievementLike[];
   onDismissAchievement?: () => void;
 };
 
@@ -62,7 +62,7 @@ const AnagramsResultOverlay: React.FC<Props> = ({
   onClose,
   onPlayAgain,
   onGoHome,
-  achievement = null,
+  achievements = [],
   onDismissAchievement,
 }) => {
   const { background } = useTheme();
@@ -146,7 +146,7 @@ const AnagramsResultOverlay: React.FC<Props> = ({
         shareLabel="Share Result"
       />
       <AchievementPopup
-        achievement={achievement}
+        achievements={achievements}
         onDismiss={onDismissAchievement ?? (() => {})}
         backgroundColor={CARD}
         textColor={TEXT}

@@ -226,14 +226,6 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
   );
   const [lifetimeStats, setLifetimeStats] = useState<WordSearchStats | null>(null);
   const [pendingAchievements, setPendingAchievements] = useState<WSAchievement[]>([]);
-  const [currentPopup, setCurrentPopup] = useState<WSAchievement | null>(null);
-
-  useEffect(() => {
-    if (pendingAchievements.length > 0 && !currentPopup) {
-      setCurrentPopup(pendingAchievements[0]);
-      setPendingAchievements(prev => prev.slice(1));
-    }
-  }, [pendingAchievements, currentPopup]);
 
   // Resume from a previous session: the puzzle grid is deterministic per
   // day (same seed), so we can match saved word strings back against
@@ -854,8 +846,8 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
 
       {/* ── Achievement popup ── */}
       <AchievementPopup
-        achievement={currentPopup}
-        onDismiss={() => setCurrentPopup(null)}
+        achievements={pendingAchievements}
+        onDismiss={() => setPendingAchievements([])}
         backgroundColor={background.cardColor}
         textColor={background.textColor}
       />
@@ -881,8 +873,8 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
             // one transition, nothing left to flash.
             router.dismissTo('/wordsearch');
           }}
-          achievement={currentPopup}
-          onDismissAchievement={() => setCurrentPopup(null)}
+          achievements={pendingAchievements}
+          onDismissAchievement={() => setPendingAchievements([])}
           puzzleGrid={puzzleData.grid}
           puzzleWords={puzzleData.words}
           foundWordTexts={gameState.foundWords.map(w => w.word)}

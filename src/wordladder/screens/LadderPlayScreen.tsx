@@ -122,7 +122,6 @@ const LadderPlayScreen: React.FC<Props> = ({
   });
 
   const [pendingAchievements, setPendingAchievements] = useState<Achievement[]>([]);
-  const [currentPopupAchievement, setCurrentPopupAchievement] = useState<Achievement | null>(null);
 
   // Offset the start time backward by however much play time already
   // happened in a previous session, so the timer keeps counting up
@@ -185,13 +184,6 @@ const LadderPlayScreen: React.FC<Props> = ({
   useEffect(() => {
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
   }, [chain.length]);
-
-  useEffect(() => {
-    if (pendingAchievements.length > 0 && !currentPopupAchievement) {
-      setCurrentPopupAchievement(pendingAchievements[0]);
-      setPendingAchievements((prev) => prev.slice(1));
-    }
-  }, [pendingAchievements, currentPopupAchievement]);
 
   const tileSize = useMemo(() => {
     const gap = 6;
@@ -456,8 +448,8 @@ const LadderPlayScreen: React.FC<Props> = ({
 
       {/* Achievement Popup */}
       <AchievementPopup
-        achievement={currentPopupAchievement}
-        onDismiss={() => setCurrentPopupAchievement(null)}
+        achievements={pendingAchievements}
+        onDismiss={() => setPendingAchievements([])}
         backgroundColor={background.cardColor}
         textColor={background.textColor}
       />
@@ -700,8 +692,8 @@ const LadderPlayScreen: React.FC<Props> = ({
           onPlayAgain?.();
         }}
         onGoHome={onGoHome}
-        achievement={currentPopupAchievement}
-        onDismissAchievement={() => setCurrentPopupAchievement(null)}
+        achievements={pendingAchievements}
+        onDismissAchievement={() => setPendingAchievements([])}
       />
     </SafeAreaView>
   );

@@ -412,7 +412,6 @@ export default function WordBuilder() {
   // Achievement State
   const [unlockedAchievements, setUnlockedAchievements] = useState<(Achievement & { unlockedAt: string })[]>([]);
   const [pendingAchievements, setPendingAchievements] = useState<Achievement[]>([]);
-  const [currentPopupAchievement, setCurrentPopupAchievement] = useState<Achievement | null>(null);
 
   // Swipe Tooltip State
   const SWIPE_TOOLTIP_KEY = 'wordbuilder_swipe_tooltip_shown';
@@ -477,16 +476,8 @@ export default function WordBuilder() {
   }, [gameOver]);
 
 
-  // Show achievement popups one at a time
-  useEffect(() => {
-    if (pendingAchievements.length > 0 && !currentPopupAchievement) {
-      setCurrentPopupAchievement(pendingAchievements[0]);
-      setPendingAchievements(prev => prev.slice(1));
-    }
-  }, [pendingAchievements, currentPopupAchievement]);
-
   const handleAchievementDismiss = () => {
-    setCurrentPopupAchievement(null);
+    setPendingAchievements([]);
   };
 
   const refreshPlayerData = async () => {
@@ -1143,7 +1134,7 @@ export default function WordBuilder() {
 
       {/* Achievement Popup */}
       <AchievementPopup
-        achievement={currentPopupAchievement}
+        achievements={pendingAchievements}
         onDismiss={handleAchievementDismiss}
         backgroundColor={background.cardColor}
         textColor={background.textColor}

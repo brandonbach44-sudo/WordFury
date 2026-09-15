@@ -129,7 +129,6 @@ const AnagramsPlayScreen: React.FC<Props> = ({
   const [solved, setSolved] = useState(false);
 
   const [pendingAchievements, setPendingAchievements] = useState<Achievement[]>([]);
-  const [currentPopupAchievement, setCurrentPopupAchievement] = useState<Achievement | null>(null);
 
   // Equipped cube skin — cosmetic only, applies in both Daily and Practice
   // even though unlocking one is Daily-only (see anagramsTiers.ts).
@@ -191,13 +190,6 @@ const AnagramsPlayScreen: React.FC<Props> = ({
       setFinalStreaks({ current: stats.daily.currentStreak, best: stats.daily.bestStreak });
     });
   }, [alreadyLocked]);
-
-  useEffect(() => {
-    if (pendingAchievements.length > 0 && !currentPopupAchievement) {
-      setCurrentPopupAchievement(pendingAchievements[0]);
-      setPendingAchievements((prev) => prev.slice(1));
-    }
-  }, [pendingAchievements, currentPopupAchievement]);
 
   function triggerShake() {
     setShake(true);
@@ -540,8 +532,8 @@ const AnagramsPlayScreen: React.FC<Props> = ({
       <StatusBar barStyle={background.statusBar === 'light' ? 'light-content' : 'dark-content'} />
 
       <AchievementPopup
-        achievement={currentPopupAchievement}
-        onDismiss={() => setCurrentPopupAchievement(null)}
+        achievements={pendingAchievements}
+        onDismiss={() => setPendingAchievements([])}
         backgroundColor={background.cardColor}
         textColor={background.textColor}
       />
@@ -876,8 +868,8 @@ const AnagramsPlayScreen: React.FC<Props> = ({
           onPlayAgain?.();
         }}
         onGoHome={onGoHome}
-        achievement={currentPopupAchievement}
-        onDismissAchievement={() => setCurrentPopupAchievement(null)}
+        achievements={pendingAchievements}
+        onDismissAchievement={() => setPendingAchievements([])}
       />
     </SafeAreaView>
   );

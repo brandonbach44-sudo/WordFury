@@ -17,7 +17,7 @@ type GameStatusProps = {
   onBackToMenu: () => void;
   onClose: () => void;
   // Achievement toast to render inside this Modal — see AchievementPopup.
-  achievement?: AchievementLike | null;
+  achievements?: AchievementLike[];
   onDismissAchievement?: () => void;
 };
 
@@ -32,7 +32,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   onPlayAgain,
   onBackToMenu,
   onClose,
-  achievement = null,
+  achievements = [],
   onDismissAchievement,
 }) => {
   const { background } = useTheme();
@@ -103,7 +103,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
         shareLabel="Share Result"
       />
       <AchievementPopup
-        achievement={achievement}
+        achievements={achievements}
         onDismiss={onDismissAchievement ?? (() => {})}
         backgroundColor={CARD}
         textColor={TEXT}

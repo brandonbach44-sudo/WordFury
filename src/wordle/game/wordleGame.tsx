@@ -603,7 +603,6 @@ export default function WordleGame() {
 
   // Achievement popup state
   const [pendingAchievements, setPendingAchievements] = useState<Achievement[]>([]);
-  const [currentPopupAchievement, setCurrentPopupAchievement] = useState<Achievement | null>(null);
   // Track IDs already unlocked at session start so we don't re-fire old ones
   const sessionStartUnlockedRef = useRef<Set<string> | null>(null);
 
@@ -833,14 +832,6 @@ export default function WordleGame() {
     };
   }, []);
 
-
-  // Show popups one at a time
-  useEffect(() => {
-    if (pendingAchievements.length > 0 && !currentPopupAchievement) {
-      setCurrentPopupAchievement(pendingAchievements[0]);
-      setPendingAchievements((prev) => prev.slice(1));
-    }
-  }, [pendingAchievements, currentPopupAchievement]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -1711,8 +1702,8 @@ export default function WordleGame() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: BG }]} edges={['top', 'left', 'right']}>
       <AchievementPopup
-        achievement={currentPopupAchievement as any}
-        onDismiss={() => setCurrentPopupAchievement(null)}
+        achievements={pendingAchievements as any}
+        onDismiss={() => setPendingAchievements([])}
         backgroundColor={CARD}
         textColor={TEXT}
       />
@@ -2337,8 +2328,8 @@ export default function WordleGame() {
           nextDailySecondsRemaining={overlayMode === "daily" && isDailyCompletedToday ? nextDailySeconds : null}
           shareText={overlayShareText}
           evaluationRows={overlayEvaluationRows}
-          achievement={currentPopupAchievement as any}
-          onDismissAchievement={() => setCurrentPopupAchievement(null)}
+          achievements={pendingAchievements as any}
+          onDismissAchievement={() => setPendingAchievements([])}
         />
       </View>
 
