@@ -25,7 +25,7 @@ import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyRem
 import { AchievementPopup } from '../../shared/AchievementPopup';
 import { WordReportPrompt } from '../../shared/WordReportPrompt';
 import { FallingLetters } from '../../shared/FallingLetters';
-import GridWithGesture from '../components/GridWithGesture';
+import GridWithGesture, { type GridWithGestureHandle } from '../components/GridWithGesture';
 import { FeedbackOverlay } from './FeedbackOverlay';
 import { DailyChallengeCard } from '../components/DailyChallengeCard';
 import DailyCalendar, { type CalendarHistory } from '../../shared/DailyCalendar';
@@ -228,6 +228,19 @@ export default function GameScreen() {
   const [gameOver, setGameOver] = useState(false);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const feedbackKeyRef = useRef(0);
+  const gridRef = useRef<GridWithGestureHandle>(null);
+  const [selectionPath, setSelectionPath] = useState<Position[]>([]);
+  const stripShakeAnim = useRef(new Animated.Value(0)).current;
+  const handleTapRejected = useCallback(() => {
+    HapticManager.wordGrid.invalidWord();
+    stripShakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(stripShakeAnim, { toValue: 1, duration: 45, useNativeDriver: true }),
+      Animated.timing(stripShakeAnim, { toValue: -1, duration: 45, useNativeDriver: true }),
+      Animated.timing(stripShakeAnim, { toValue: 1, duration: 45, useNativeDriver: true }),
+      Animated.timing(stripShakeAnim, { toValue: 0, duration: 45, useNativeDriver: true }),
+    ]).start();
+  }, [stripShakeAnim]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Set true when an in-progress Daily attempt was restored on app launch —
   // tells startDailyGame to enter the already-loaded game instead of
@@ -724,54 +737,98 @@ export default function GameScreen() {
           textColor={bg.textColor}
         />
 
+        {/* Tapping empty space clears an in-progress tap selection. Taps that
+            land on the header, grid, or word strip are consumed by those and
+            never reach this. */}
+        <Pressable
+          style={{ flex: 1 }}
+          onPress={() => gridRef.current?.clearSelection()}
+        >
+          {/* Header: Back | Timer | Score */}
+          <View style={styles.gameHeader}>
+            <TouchableOpacity onPress={handleGameplayBackPress} activeOpacity={0.6} hitSlop={10}>
+              <Text style={[styles.backText, { color: bg.secondaryText }]}>← Back</Text>
+            </TouchableOpacity>
+            <Text style={[styles.timerText, { color: timerColor }, timeLeft <= 10 && styles.timerWarning]}>
+              {formatTime(timeLeft)}
+            </Text>
+            <Text style={[styles.scoreText, { color: background.accentColor }]}>{score} pts</Text>
+          </View>
 
-        {/* Header: Back | Timer | Score */}
-        <View style={styles.gameHeader}>
-          <TouchableOpacity onPress={handleGameplayBackPress} activeOpacity={0.6} hitSlop={10}>
-            <Text style={[styles.backText, { color: bg.secondaryText }]}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={[styles.timerText, { color: timerColor }, timeLeft <= 10 && styles.timerWarning]}>
-            {formatTime(timeLeft)}
-          </Text>
-          <Text style={[styles.scoreText, { color: background.accentColor }]}>{score} pts</Text>
-        </View>
-
-        {/* Spacer pushes grid toward middle/bottom for thumb reach */}
-        <View style={{ flex: 1 }} />
-
-        {/* Grid */}
-        <View style={styles.gridWrapper}>
-          <GridWithGesture
-            grid={grid}
-            onPathComplete={handlePathComplete}
-            disabled={gameOver}
-          />
-          {feedbacks.map((f) => (
-            <FeedbackOverlay
-              key={f.key}
-              points={f.points}
-              success={f.success}
-              alreadyFound={f.alreadyFound}
-              onComplete={() => removeFeedback(f.key)}
-            />
-          ))}
-        </View>
-
-        <View style={{ flex: 1 }} />
-
-        {/* Found words — same badge style as WordBuilder */}
-        <View style={styles.foundWordsSection}>
-          <Text style={[styles.foundWordsTitle, { color: bg.secondaryText }]}>
-            Found: {foundWords.length}
-          </Text>
-          <View style={styles.foundWordsWrap}>
-            {foundWords.slice(0, 24).map((item, index) => (
-              <View key={index} style={[styles.foundWordBadge, { borderColor: background.accentColor }]}>
-                <Text style={[styles.foundWordText, { color: background.accentColor }]}>{item.word.toUpperCase()}</Text>
+          {/* Spacer pushes grid toward middle/bottom for thumb reach -- also
+              where the word-in-progress strip lives (2a), present only while
+              a word is being built. */}
+          <View style={{ flex: 1 }}>
+            {selectionPath.length > 0 && (
+              <View style={styles.wordStripWrap}>
+                <Animated.View
+                  style={{
+                    transform: [
+                      {
+                        translateX: stripShakeAnim.interpolate({
+                          inputRange: [-1, 1],
+                          outputRange: [-6, 6],
+                        }),
+                      },
+                    ],
+                  }}
+                >
+                  <TouchableOpacity
+                    activeOpacity={selectionPath.length >= 3 ? 0.7 : 1}
+                    disabled={selectionPath.length < 3}
+                    onPress={() => gridRef.current?.submitSelection()}
+                    style={[
+                      styles.wordStrip,
+                      { backgroundColor: bg.cardColor, borderColor: background.accentColor },
+                      selectionPath.length < 3 && styles.wordStripDimmed,
+                    ]}
+                  >
+                    <Text style={[styles.wordStripText, { color: bg.textColor }]}>
+                      {selectionPath.map((pos) => grid[pos.row][pos.col]).join('')}
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
               </View>
+            )}
+          </View>
+
+          {/* Grid */}
+          <View style={styles.gridWrapper}>
+            <GridWithGesture
+              ref={gridRef}
+              grid={grid}
+              onPathComplete={handlePathComplete}
+              onSelectionChange={setSelectionPath}
+              onTapRejected={handleTapRejected}
+              disabled={gameOver}
+            />
+            {feedbacks.map((f) => (
+              <FeedbackOverlay
+                key={f.key}
+                points={f.points}
+                success={f.success}
+                alreadyFound={f.alreadyFound}
+                onComplete={() => removeFeedback(f.key)}
+              />
             ))}
           </View>
-        </View>
+
+          <View style={{ flex: 1 }} />
+
+          {/* Found words — same badge style as WordBuilder */}
+          <View style={styles.foundWordsSection}>
+            <Text style={[styles.foundWordsTitle, { color: bg.secondaryText }]}>
+              Found: {foundWords.length}
+            </Text>
+            <View style={styles.foundWordsWrap}>
+              {foundWords.slice(0, 24).map((item, index) => (
+                <View key={index} style={[styles.foundWordBadge, { borderColor: background.accentColor }]}>
+                  <Text style={[styles.foundWordText, { color: background.accentColor }]}>{item.word.toUpperCase()}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </Pressable>
       </SafeAreaView>
     );
   }
@@ -1174,6 +1231,28 @@ const styles = StyleSheet.create({
   gridWrapper: {
     alignItems: 'center',
     position: 'relative',
+  },
+  wordStripWrap: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    flex: 1,
+    paddingBottom: 12,
+  },
+  wordStrip: {
+    minWidth: 120,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 2,
+    alignItems: 'center',
+  },
+  wordStripDimmed: {
+    opacity: 0.5,
+  },
+  wordStripText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    letterSpacing: 4,
   },
   foundWordsSection: {
     width: '100%',

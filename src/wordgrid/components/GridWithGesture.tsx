@@ -1,5 +1,5 @@
 // app/wordgrid/components/GridWithGesture.tsx
-import React, { useRef, useState } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Line } from 'react-native-svg';
@@ -54,6 +54,12 @@ const DIRECTION_BIAS = CELL_STEP * 0.22;
 // running "swipe direction" estimate. Higher = steadier direction, slower to
 // react to a genuine change in swipe direction.
 const VELOCITY_ALPHA = 0.5;
+
+// How far the finger may drift from where it touched down before this stops
+// being a tap and becomes a drag. Absolute px, not CELL_STEP-relative — this
+// is about distinguishing finger tremor from an intentional swipe, not about
+// grid geometry.
+const TAP_SLOP = 10;
 
 // Center pixel of a cell (relative to the inner gesture area, offset by padding)
 function cellCenter(pos: Position) {
@@ -147,13 +153,60 @@ function pickNextCell(
   return best;
 }
 
+// Applies one tap to an existing path, per the tap rules:
+//   adjacent unselected letter -> append
+//   the most recent letter -> remove it
+//   an earlier selected letter -> truncate back to and including it
+//   a non-adjacent letter -> reject, path unchanged
+// An empty path accepts any first tile (there's nothing to be adjacent to).
+function applyTapToPath(
+  path: Position[],
+  cell: Position
+): { path: Position[]; rejected: boolean } {
+  if (path.length === 0) {
+    return { path: [cell], rejected: false };
+  }
+
+  const existingIdx = path.findIndex((c) => c.row === cell.row && c.col === cell.col);
+
+  if (existingIdx === path.length - 1) {
+    // Tapping the most recent letter removes it.
+    return { path: path.slice(0, -1), rejected: false };
+  }
+
+  if (existingIdx !== -1) {
+    // Tapping an earlier letter truncates back to it -- same trim operation
+    // the drag backtrack branch in onUpdate performs, just driven by a tap.
+    return { path: path.slice(0, existingIdx + 1), rejected: false };
+  }
+
+  const last = path[path.length - 1];
+  if (!isAdjacent(last, cell)) {
+    return { path, rejected: true };
+  }
+
+  return { path: [...path, cell], rejected: false };
+}
+
+export interface GridWithGestureHandle {
+  /** Submits the current selection, as if the word strip were tapped. No-op below 3 letters. */
+  submitSelection: () => void;
+  /** Clears the current tap selection, as if the player tapped outside the grid. */
+  clearSelection: () => void;
+}
+
 interface Props {
   grid: string[][];
   onPathComplete: (path: Position[]) => void;
+  onSelectionChange?: (path: Position[]) => void;
+  onTapRejected?: () => void;
   disabled?: boolean;
 }
 
-export default function GridWithGesture({ grid, onPathComplete, disabled = false }: Props) {
+const GridWithGesture = forwardRef<GridWithGestureHandle, Props>(function GridWithGesture(
+  { grid, onPathComplete, onSelectionChange, onTapRejected, disabled = false },
+  ref
+) {
   const [selectedCells, setSelectedCells] = useState<Position[]>([]);
   const [livePoint, setLivePoint] = useState<{ x: number; y: number } | null>(null);
   const pathRef = useRef<Position[]>([]);
@@ -161,19 +214,52 @@ export default function GridWithGesture({ grid, onPathComplete, disabled = false
   const smoothedRef = useRef<{ x: number; y: number } | null>(null);
   // Running estimate of swipe direction, used to bias corner ties (see DIRECTION_BIAS).
   const velocityRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  // Whether the current touch has moved past TAP_SLOP -- decides tap vs drag at onEnd.
+  const movedRef = useRef(false);
+  // Whether this gesture instance's onEnd already ran, so onFinalize's
+  // cancellation fallback doesn't also fire (and wipe a tap it just made).
+  const endHandledRef = useRef(false);
+  // The cell under the finger at touch-down. If this touch turns into a
+  // drag, onUpdate starts the drag path fresh from here, discarding whatever
+  // tap preview onBegin optimistically applied.
+  const dragStartCellRef = useRef<Position>({ row: 0, col: 0 });
+  // Whether onBegin's optimistic tap application was a reject (non-adjacent
+  // letter). Only acted on on if the touch stays a tap through onEnd -- a
+  // touch that becomes a drag is a valid drag start from anywhere.
+  const pendingRejectRef = useRef(false);
+  const modeRef = useRef<'idle' | 'dragging' | 'tapping'>('idle');
 
-  // Submit the current path and reset state. Only ever called from onEnd/
-  // onFinalize now — a word commits when the finger actually lifts (or the
-  // gesture is cancelled), never just from holding still mid-drag. A pause
-  // timer used to auto-submit after 300ms stationary, which cut a run short
-  // any time a player paused to think about where to go next.
+  const updateSelection = (next: Position[]) => {
+    pathRef.current = next;
+    setSelectedCells(next);
+    onSelectionChange?.(next);
+  };
+
+  // Submit the current path and reset state. Called from onEnd for a drag
+  // (a word commits when the finger actually lifts, never just from holding
+  // still mid-drag -- a pause timer used to auto-submit after 300ms
+  // stationary, which cut a run short any time a player paused to think
+  // about where to go next) and from submitSelection for a tapped word.
   const submitPath = () => {
     const path = pathRef.current;
-    pathRef.current = [];
-    setSelectedCells([]);
+    updateSelection([]);
     setLivePoint(null);
     if (path.length >= 3) onPathComplete(path);
   };
+
+  useImperativeHandle(ref, () => ({
+    submitSelection: () => {
+      if (pathRef.current.length < 3) return;
+      modeRef.current = 'idle';
+      submitPath();
+    },
+    clearSelection: () => {
+      if (pathRef.current.length === 0) return;
+      modeRef.current = 'idle';
+      updateSelection([]);
+      setLivePoint(null);
+    },
+  }));
 
   const panGesture = Gesture.Pan()
     .enabled(!disabled)
@@ -181,17 +267,39 @@ export default function GridWithGesture({ grid, onPathComplete, disabled = false
     .minDistance(0)
     .onBegin((e) => {
       const cell = getClosestCell(e.x, e.y);
-      pathRef.current = [cell];
-      setSelectedCells([cell]);
+      dragStartCellRef.current = cell;
+      movedRef.current = false;
+      endHandledRef.current = false;
       setLivePoint({ x: e.x, y: e.y });
-      smoothedRef.current = { x: e.x, y: e.y };
-      velocityRef.current = { x: 0, y: 0 };
+
+      // Optimistically apply this touch as a tap against whatever's
+      // currently selected, for the same instant feedback a drag has always
+      // had -- most touches ARE taps, and there's nothing left to correct at
+      // onEnd if this turns out to be one. If it turns into a drag instead,
+      // onUpdate overrides this the moment real movement is seen.
+      const result = applyTapToPath(pathRef.current, cell);
+      pendingRejectRef.current = result.rejected;
+      if (!result.rejected) updateSelection(result.path);
+      // A reject leaves the current selection untouched, exactly as the tap
+      // rules require -- shown only if this stays a tap through onEnd.
     })
     .onStart((_e) => {
       // onBegin already committed the starting cell — do NOT override it here.
     })
     .onUpdate((e) => {
       setLivePoint({ x: e.x, y: e.y });
+
+      if (!movedRef.current) {
+        if (Math.hypot(e.translationX, e.translationY) <= TAP_SLOP) return;
+        // Real movement: this is a drag, not a tap. Starting a drag clears
+        // any existing (or just-previewed) tap selection and begins fresh
+        // from wherever the finger touched down.
+        movedRef.current = true;
+        modeRef.current = 'dragging';
+        updateSelection([dragStartCellRef.current]);
+        smoothedRef.current = { x: e.x, y: e.y };
+        velocityRef.current = { x: 0, y: 0 };
+      }
 
       // Update the smoothed point (EMA) used for all cell-detection math below.
       // This is what removes corner jitter without penalizing genuine diagonal moves.
@@ -248,9 +356,7 @@ export default function GridWithGesture({ grid, onPathComplete, disabled = false
         // than to the cell we're leaving. Must exceed BACKTRACK_GAP.
         if (distFromLast - distToClosest < BACKTRACK_GAP) return;
 
-        const trimmed = path.slice(0, existingIdx + 1);
-        pathRef.current = trimmed;
-        setSelectedCells(trimmed);
+        updateSelection(path.slice(0, existingIdx + 1));
         return;
       }
 
@@ -269,16 +375,33 @@ export default function GridWithGesture({ grid, onPathComplete, disabled = false
       if (distToClosest > CONFIDENT_RADIUS) return;
 
       // Forward: add the new adjacent cell.
-      const next = [...path, closest];
-      pathRef.current = next;
-      setSelectedCells(next);
+      updateSelection([...path, closest]);
     })
     .onEnd(() => {
+      endHandledRef.current = true;
+
+      if (!movedRef.current) {
+        // Stayed within tap tolerance the whole touch: a genuine tap.
+        // onBegin already applied it optimistically -- just finalize the
+        // mode and fire the reject feedback if it didn't fit anywhere.
+        modeRef.current = pathRef.current.length > 0 ? 'tapping' : 'idle';
+        setLivePoint(null);
+        if (pendingRejectRef.current) onTapRejected?.();
+        return;
+      }
+
+      modeRef.current = 'idle';
       submitPath();
     })
     .onFinalize(() => {
-      // Covers cancelled gestures (e.g. incoming call interrupting the touch).
-      if (pathRef.current.length > 0) submitPath();
+      // Covers a cancelled drag (e.g. an incoming call interrupting the
+      // touch) that never reached onEnd. A cancelled tap needs no cleanup --
+      // onBegin's optimistic update already reflects the correct end state.
+      if (endHandledRef.current) return;
+      if (movedRef.current) {
+        modeRef.current = 'idle';
+        submitPath();
+      }
     });
 
   const innerSize = GRID_DIM + GRID_PADDING * 2;
@@ -367,7 +490,9 @@ export default function GridWithGesture({ grid, onPathComplete, disabled = false
       </GestureDetector>
     </View>
   );
-}
+});
+
+export default GridWithGesture;
 
 const styles = StyleSheet.create({
   outerContainer: {
