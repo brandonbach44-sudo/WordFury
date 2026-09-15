@@ -1135,7 +1135,7 @@ export default function WordleGame() {
       );
       const resultStr = result === "won" ? `${guessesUsed}/6` : "X/6";
       const header = gameMode === "daily"
-        ? `🟩 FURDLE DAILY #${getDailyIndex()}`
+        ? "🟩 FURDLE DAILY"
         : "🟩 FURDLE";
 
       // Mirrors the streak math in the stats updater below, computed here
@@ -1872,7 +1872,7 @@ export default function WordleGame() {
                           const fallbackStreakLine = stats.daily.currentStreak > 1 ? `${stats.daily.currentStreak} day streak` : "";
                           // Built imperatively so the blank-line spacers
                           // survive — see the same fix in endGame() above.
-                          const fallbackLines: string[] = [`🟩 FURDLE DAILY #${getDailyIndex()}`];
+                          const fallbackLines: string[] = ["🟩 FURDLE DAILY"];
                           if (fallbackGrid) fallbackLines.push(fallbackGrid);
                           fallbackLines.push("", fallbackStatsLine);
                           if (fallbackStreakLine) fallbackLines.push(fallbackStreakLine);
