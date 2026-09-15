@@ -55,21 +55,6 @@ const DIRECTION_BIAS = CELL_STEP * 0.22;
 // react to a genuine change in swipe direction.
 const VELOCITY_ALPHA = 0.5;
 
-// Serif "I" — renders with top and bottom horizontal bars so it's
-// clearly distinguishable from lowercase "l"
-function SerifI({ color }: { color: string }) {
-  const barW = 18;
-  const stemW = 4;
-  const stemH = 16;
-  return (
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: barW, height: stemW, backgroundColor: color, borderRadius: 1 }} />
-      <View style={{ width: stemW, height: stemH, backgroundColor: color }} />
-      <View style={{ width: barW, height: stemW, backgroundColor: color, borderRadius: 1 }} />
-    </View>
-  );
-}
-
 // Center pixel of a cell (relative to the inner gesture area, offset by padding)
 function cellCenter(pos: Position) {
   return {
@@ -325,13 +310,9 @@ export default function GridWithGesture({ grid, onPathComplete, disabled = false
                           <Text style={styles.indexText}>{selIndex + 1}</Text>
                         </View>
                       )}
-                      {letter === 'I' ? (
-                        <SerifI color={isSelected ? '#fff' : '#3d2e1c'} />
-                      ) : (
-                        <Text style={[styles.letter, isSelected && styles.selectedLetter]}>
-                          {letter}
-                        </Text>
-                      )}
+                      <Text style={[styles.letter, isSelected && styles.selectedLetter]}>
+                        {letter}
+                      </Text>
                     </View>
                   );
                 })}
