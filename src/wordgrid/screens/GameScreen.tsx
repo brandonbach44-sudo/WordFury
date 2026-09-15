@@ -896,7 +896,7 @@ export default function GameScreen() {
               activeOpacity={0.7}
             >
               <Text style={[styles.quickPlayTitle, { color: bg.textColor }]}>Quick Play</Text>
-              <Text style={[styles.quickPlaySub, { color: bg.secondaryText }]}>1 minute · 4×4 letter grid</Text>
+              <Text style={[styles.quickPlaySub, { color: bg.secondaryText }]}>1 minute · 16 letters</Text>
             </TouchableOpacity>
 
             {/* How to Play */}
