@@ -718,6 +718,10 @@ export default function WordleGame() {
         setStats(mergeLoadedStats(loadedStats));
 
         let lockedToday = false;
+        // Set alongside lockedToday so the completed-Daily restore below can
+        // read a properly narrowed (non-null) lock rather than loadedLock,
+        // whose null check here does not persist to code further down.
+        let todayLock: typeof loadedLock | null = null;
         if (
           loadedLock &&
           typeof loadedLock === "object" &&
@@ -741,82 +745,109 @@ export default function WordleGame() {
                 : undefined,
           });
           lockedToday = loadedLock.dateISO === getTodayISODate();
-
-          // Daily is already completed for today — reflect that in game
-          // state immediately, otherwise `status` stays at its default
-          // "playing" and the "Leave Daily Challenge?" prompt (which only
-          // guards an in-progress attempt) fires on every remount even
-          // though there's nothing left to leave.
-          //
-          // Guarded on screenRef still being "menu": this hydration read is
-          // async and can resolve after the player has already tapped into
-          // a game (Quick Play or otherwise). Without this check, a slow
-          // resolution would silently overwrite their in-progress board
-          // with the Daily's old completed state from earlier — including
-          // yanking them into a stale results screen mid-Quick-Play.
-          if (lockedToday && screenRef.current === "menu") {
-            setGameMode("daily");
-            setStatus(loadedLock.result);
-            setSolution(getDailySolution());
-            if (Array.isArray(loadedLock.guesses)) {
-              setGuesses(loadedLock.guesses);
-              // Immediately show colored back face for all restored rows —
-              // no flip animation needed for already-completed guesses.
-              loadedLock.guesses.forEach((_: string, rowIndex: number) => {
-                for (let c = 0; c < COLS; c++) {
-                  flipAnims[rowIndex][c].setValue(1);
-                }
-              });
-            }
-            if (Array.isArray(loadedLock.evaluations)) {
-              setEvaluations(loadedLock.evaluations as EvaluatedLetter[][]);
-            }
-          }
+          todayLock = loadedLock;
         } else {
           setDailyLock(null);
         }
 
-        // Resume an in-progress Daily attempt (app closed/backgrounded mid-game)
-        // unless today's Daily is already completed. Same screenRef guard as
-        // above — don't clobber a game the player has already started.
-        if (!lockedToday && screenRef.current === "menu") {
-          const savedProgress = await loadDailyProgress();
-          if (isMounted && screenRef.current === "menu" && savedProgress && savedProgress.dateISO === getTodayISODate()) {
-            setGameMode("daily");
-            setSolution(getDailySolution());
-            setGuesses(savedProgress.guesses);
-            setEvaluations(savedProgress.evaluations as EvaluatedLetter[][]);
-            setCurrentGuess(savedProgress.currentGuess);
-            setStartTime(Date.now() - savedProgress.elapsedSeconds * 1000);
-            // Immediately show colored back face for all restored rows —
-            // no flip animation needed for already-submitted guesses.
-            savedProgress.guesses.forEach((_: string, rowIndex: number) => {
-              for (let c = 0; c < COLS; c++) {
-                flipAnims[rowIndex][c].setValue(1);
-              }
-            });
-            resumedDailyRef.current = true;
-            if (isMounted) setDailyInProgressToday(true);
-          }
-        }
+        // Exactly one game state gets restored below, decided up front
+        // rather than letting the completed-Daily, in-progress-Daily and
+        // in-progress-Quick-Play blocks each write over one another in
+        // sequence. That sequencing bug is what shipped in build 39: the
+        // completed-Daily branch set gameMode/status/solution/guesses/
+        // evaluations but not resumedDailyRef, so the Quick Play branch
+        // below it (guarded only on resumedDailyRef) also ran and
+        // overwrote every field it touches, EXCEPT status, message and
+        // resumedDailyRef itself. That left status stuck on "won" under a
+        // freshly-restored, unsolved practice board, and every input path
+        // guards on status !== "playing", so the keyboard went dead. Any
+        // future restore branch must set every field that defines game
+        // state, status and message included, or leave the others alone
+        // entirely.
+        //
+        // Guarded on screenRef still being "menu" throughout: this
+        // hydration read is async and can resolve after the player has
+        // already tapped into a game. Without this check, a slow
+        // resolution would silently overwrite their in-progress board with
+        // stale state from earlier.
+        if (screenRef.current === "menu") {
+          const savedDailyProgress = !lockedToday ? await loadDailyProgress() : null;
+          const inProgressDaily =
+            isMounted &&
+            screenRef.current === "menu" &&
+            !!savedDailyProgress &&
+            savedDailyProgress.dateISO === getTodayISODate();
 
-        // Resume an in-progress Quick Play (Practice) attempt.
-        // Only restore if we haven't already placed the player into the daily.
-        if (!resumedDailyRef.current && screenRef.current === "menu") {
-          const savedPractice = await loadPracticeProgress();
-          if (isMounted && savedPractice) {
-            setGameMode("practice");
-            setSolution(savedPractice.solution);
-            setGuesses(savedPractice.guesses);
-            setEvaluations(savedPractice.evaluations as EvaluatedLetter[][]);
-            setCurrentGuess(savedPractice.currentGuess);
-            setStartTime(Date.now() - savedPractice.elapsedSeconds * 1000);
-            savedPractice.guesses.forEach((_: string, rowIndex: number) => {
-              for (let c = 0; c < COLS; c++) {
-                flipAnims[rowIndex][c].setValue(1);
+          // Only bother loading a saved Quick Play attempt if the in-progress
+          // Daily above did not already win, since Quick Play only matters
+          // here as a fallback.
+          const savedPractice =
+            !inProgressDaily ? await loadPracticeProgress() : null;
+
+          if (isMounted && screenRef.current === "menu") {
+            if (inProgressDaily && savedDailyProgress) {
+              // Resume an in-progress Daily attempt (app closed/backgrounded mid-game).
+              setGameMode("daily");
+              setSolution(getDailySolution());
+              setGuesses(savedDailyProgress.guesses);
+              setEvaluations(savedDailyProgress.evaluations as EvaluatedLetter[][]);
+              setCurrentGuess(savedDailyProgress.currentGuess);
+              setStartTime(Date.now() - savedDailyProgress.elapsedSeconds * 1000);
+              setStatus("playing");
+              setMessage(null);
+              // Immediately show colored back face for all restored rows,
+              // no flip animation needed for already-submitted guesses.
+              savedDailyProgress.guesses.forEach((_: string, rowIndex: number) => {
+                for (let c = 0; c < COLS; c++) {
+                  flipAnims[rowIndex][c].setValue(1);
+                }
+              });
+              resumedDailyRef.current = true;
+              setDailyInProgressToday(true);
+            } else if (savedPractice) {
+              // Resume an in-progress Quick Play (Practice) attempt. This
+              // wins over a completed Daily's board below: it is a real
+              // unfinished game and the completed Daily is not. The lock
+              // recorded above still makes the menu show View Result and
+              // keeps the "Leave Daily Challenge?" prompt suppressed.
+              setGameMode("practice");
+              setSolution(savedPractice.solution);
+              setGuesses(savedPractice.guesses);
+              setEvaluations(savedPractice.evaluations as EvaluatedLetter[][]);
+              setCurrentGuess(savedPractice.currentGuess);
+              setStartTime(Date.now() - savedPractice.elapsedSeconds * 1000);
+              setStatus("playing");
+              setMessage(null);
+              savedPractice.guesses.forEach((_: string, rowIndex: number) => {
+                for (let c = 0; c < COLS; c++) {
+                  flipAnims[rowIndex][c].setValue(1);
+                }
+              });
+              resumedPracticeRef.current = true;
+            } else if (lockedToday && todayLock) {
+              // Daily is already completed for today and there is no
+              // unfinished game to restore instead. Reflect the completed
+              // board immediately, otherwise `status` stays at its default
+              // "playing" and the "Leave Daily Challenge?" prompt (which
+              // only guards an in-progress attempt) fires on every remount
+              // even though there's nothing left to leave.
+              setGameMode("daily");
+              setStatus(todayLock.result);
+              setSolution(getDailySolution());
+              if (Array.isArray(todayLock.guesses)) {
+                setGuesses(todayLock.guesses);
+                // Immediately show colored back face for all restored rows,
+                // no flip animation needed for already-completed guesses.
+                todayLock.guesses.forEach((_: string, rowIndex: number) => {
+                  for (let c = 0; c < COLS; c++) {
+                    flipAnims[rowIndex][c].setValue(1);
+                  }
+                });
               }
-            });
-            resumedPracticeRef.current = true;
+              if (Array.isArray(todayLock.evaluations)) {
+                setEvaluations(todayLock.evaluations as EvaluatedLetter[][]);
+              }
+            }
           }
         }
 
