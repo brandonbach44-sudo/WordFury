@@ -26,7 +26,7 @@ const { width } = Dimensions.get('window');
 
 const AUTO_DISMISS_MS = 3000;
 // Caps the expanded list so it scrolls internally instead of growing the
-// toast tall enough to push page content — see the results-screen
+// toast tall enough to push page content -- see the results-screen
 // one-screen-fit constraint in ResultsScreen.tsx.
 const EXPANDED_LIST_MAX_HEIGHT = 260;
 
@@ -135,7 +135,7 @@ export const AchievementPopup: React.FC<AchievementPopupProps> = ({
     >
       {!isGroup ? (
         <TouchableOpacity
-          style={[styles.popup, { backgroundColor }]}
+          style={[styles.popup, { backgroundColor, borderColor: background.accentColor }]}
           onPress={dismissPopup}
           activeOpacity={0.9}
         >
@@ -156,7 +156,7 @@ export const AchievementPopup: React.FC<AchievementPopupProps> = ({
           </View>
         </TouchableOpacity>
       ) : (
-        <View style={[styles.popup, { backgroundColor }]}>
+        <View style={[styles.popup, { backgroundColor, borderColor: background.accentColor }]}>
           <TouchableOpacity onPress={() => setExpanded((e) => !e)} activeOpacity={0.9}>
             <View style={styles.groupHeaderRow}>
               <View style={styles.header}>
@@ -182,7 +182,7 @@ export const AchievementPopup: React.FC<AchievementPopupProps> = ({
                     {primary.name}
                   </Text>
                   <Text style={[styles.description, { color: textColor, opacity: 0.7 }]}>
-                    +{count - 1} more — tap to view all
+                    +{count - 1} more, tap to view all
                   </Text>
                 </View>
               </View>
@@ -267,7 +267,6 @@ const styles = StyleSheet.create({
   unlockLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4ecca3',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },

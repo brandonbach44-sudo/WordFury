@@ -352,7 +352,7 @@ export const SettingsScreen: React.FC = () => {
               </Text>
               <Text style={[styles.settingDescription, { color: background.secondaryText }]}>
                 {reduceMotionActive
-                  ? 'Falling letters on menu screens — off because Reduce Motion is on in iOS Settings'
+                  ? 'Falling letters on menu screens, off because Reduce Motion is on in iOS Settings'
                   : 'Falling letters on menu screens'}
               </Text>
             </View>

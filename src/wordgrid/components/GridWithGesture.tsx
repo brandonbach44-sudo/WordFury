@@ -56,7 +56,7 @@ const DIRECTION_BIAS = CELL_STEP * 0.22;
 const VELOCITY_ALPHA = 0.5;
 
 // How far the finger may drift from where it touched down before this stops
-// being a tap and becomes a drag. Absolute px, not CELL_STEP-relative — this
+// being a tap and becomes a drag. Absolute px, not CELL_STEP-relative -- this
 // is about distinguishing finger tremor from an intentional swipe, not about
 // grid geometry.
 const TAP_SLOP = 10;
