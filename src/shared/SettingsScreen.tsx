@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { useTheme } from './ThemeContext';
 import { HapticManager } from './HapticManager';
+import { MotionPreference } from './motionPreference';
 import { BackgroundOption, COLORS, getLightBackgrounds } from './theme';
 import FeedbackForm from '../../FeedbackForm';
 import {
@@ -73,9 +74,18 @@ export const SettingsScreen: React.FC = () => {
   const [showFeedback, setShowFeedback] = React.useState(false);
   const [reminderPrefs, setReminderPrefs] = React.useState<ReminderPrefs | null>(null);
   const [hapticsEnabled, setHapticsEnabled] = React.useState<boolean>(HapticManager.isEnabled());
+  const [motionEnabled, setMotionEnabled] = React.useState<boolean>(MotionPreference.isUserEnabled());
+  const [reduceMotionActive, setReduceMotionActive] = React.useState<boolean>(MotionPreference.isReduceMotionActive());
 
   React.useEffect(() => {
     HapticManager.init().then(() => setHapticsEnabled(HapticManager.isEnabled()));
+  }, []);
+
+  React.useEffect(() => {
+    return MotionPreference.subscribe((state) => {
+      setMotionEnabled(state.userEnabled);
+      setReduceMotionActive(state.reduceMotionEnabled);
+    });
   }, []);
 
   React.useEffect(() => {
@@ -331,6 +341,31 @@ export const SettingsScreen: React.FC = () => {
               trackColor={{ false: '#9CA3AF', true: COLORS.accent }}
               ios_backgroundColor="#9CA3AF"
               thumbColor={hapticsEnabled ? '#ffffff' : '#f4f3f4'}
+            />
+          </View>
+
+          {/* Background Motion Toggle */}
+          <View style={[styles.settingRow, { backgroundColor: background.cardColor, borderColor: background.borderColor }]}>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingLabel, { color: background.textColor }]}>
+                Background Motion
+              </Text>
+              <Text style={[styles.settingDescription, { color: background.secondaryText }]}>
+                {reduceMotionActive
+                  ? 'Falling letters on menu screens — off because Reduce Motion is on in iOS Settings'
+                  : 'Falling letters on menu screens'}
+              </Text>
+            </View>
+            <Switch
+              value={motionEnabled}
+              onValueChange={(next) => {
+                setMotionEnabled(next);
+                MotionPreference.setEnabled(next);
+              }}
+              disabled={reduceMotionActive}
+              trackColor={{ false: '#9CA3AF', true: COLORS.accent }}
+              ios_backgroundColor="#9CA3AF"
+              thumbColor={motionEnabled ? '#ffffff' : '#f4f3f4'}
             />
           </View>
 

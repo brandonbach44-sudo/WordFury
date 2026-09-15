@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
+import { MotionPreference } from './motionPreference';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -110,6 +111,11 @@ function FallingTile({ tile, areaHeight }: { tile: TileConfig; areaHeight: numbe
 }
 
 export function FallingLetters() {
+  // Resolved from both the Settings toggle and the OS Reduce Motion setting;
+  // gated here so every one of this component's call sites gets both for free.
+  const [enabled, setEnabled] = useState(() => MotionPreference.isEnabled());
+  useEffect(() => MotionPreference.subscribe((state) => setEnabled(state.resolved)), []);
+
   // Measured from the actual rendered box (via onLayout) rather than the raw
   // device window height, since this container sits inside a SafeAreaView and
   // is usually smaller than the window by the status bar / home indicator.
@@ -147,6 +153,8 @@ export function FallingLetters() {
     // small later layout wobbles shouldn't restart every tile's animation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areaHeight > 0]);
+
+  if (!enabled) return null;
 
   return (
     <View
