@@ -3,7 +3,6 @@ import { AchievementIcon } from '../../src/shared/AchievementIcon';
 import {
   Alert,
   Dimensions,
-  Modal,
   PanResponder,
   Pressable,
   ScrollView,
@@ -15,12 +14,12 @@ import {
   Animated,
   Share,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import { usePreventRemove } from '@react-navigation/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Flame, RotateCw, Share2, Trophy, X } from 'lucide-react-native';
+import { Flame, RotateCw, Share2, Trophy } from 'lucide-react-native';
 
 // Components
 import { GameTile } from '../../src/wordbuilder/components/GameTile';
@@ -287,7 +286,6 @@ export default function WordBuilder() {
   const { background } = useTheme();
   
   // Countdown timer for next daily challenge
-  const insets = useSafeAreaInsets();
   const countdownToNextDaily = useCountdownToMidnight();
   
   // Segment State
@@ -406,6 +404,16 @@ export default function WordBuilder() {
   const [dailyPlayed, setDailyPlayed] = useState(false);
   const [dailyResult, setDailyResult] = useState<{ score: number; words: string[] } | null>(null);
   const [showDailyResultModal, setShowDailyResultModal] = useState(false);
+  // Data behind the "View Results" screen, fetched fresh from storage each
+  // time it opens (see openDailyResultsModal) rather than read off dailyResult.
+  // possibleWords is null when the day's letters were never cached (an older
+  // build, or storage cleared) -- foundCount still comes straight from the
+  // stored result either way, since that is always authoritative.
+  const [dailyResultsView, setDailyResultsView] = useState<{
+    score: number;
+    foundCount: number;
+    possibleWords: PossibleWord[] | null;
+  } | null>(null);
   const [equippedTier, setEquippedTier] = useState<TierName>('default');
   const [equippedVariant, setEquippedVariant] = useState<number>(1);
 
@@ -555,19 +563,27 @@ export default function WordBuilder() {
         let updatedDaily = dailyChallenge;
         
         if (gameMode === 'daily') {
-          // Save daily challenge result
-          updatedDaily = await saveDailyResult(score, foundWords);
+          // Save daily challenge result. saveDailyResult no-ops if today was
+          // already played (e.g. a second attempt slipped through), so local
+          // state must come from what it actually stored, never from the
+          // live score/foundWords -- otherwise the screen shows this run's
+          // number while storage (and a later relaunch) still holds the
+          // earlier, real result.
+          const saveResult = await saveDailyResult(score, foundWords);
+          updatedDaily = saveResult.daily;
           setDailyChallenge(updatedDaily);
           setDailyPlayed(true);
-          setDailyResult({ score, words: foundWords });
+          setDailyResult({ score: updatedDaily.lastDailyScore, words: updatedDaily.lastDailyWords });
           resumedDailyRef.current = false;
           await clearDailyBuilderProgress();
-          await saveWordsmithDailyHistoryEntry({
-            dateISO: getTodayDateString(),
-            result: 'played',
-            detail: `${score} pts · ${foundWords.length} word${foundWords.length !== 1 ? 's' : ''}`,
-          });
-          loadWordsmithDailyHistory().catch(() => ({})).then(h => setDailyHistory((h as CalendarHistory) ?? {}));
+          if (saveResult.wrote) {
+            await saveWordsmithDailyHistoryEntry({
+              dateISO: getTodayDateString(),
+              result: 'played',
+              detail: `${score} pts · ${foundWords.length} word${foundWords.length !== 1 ? 's' : ''}`,
+            });
+            loadWordsmithDailyHistory().catch(() => ({})).then(h => setDailyHistory((h as CalendarHistory) ?? {}));
+          }
           // No win/lose state here either (score race, not solve/fail) — the
           // streak from showing up is the "good moment" signal.
           maybeRequestReview(updatedDaily?.dailyStreak ?? 0);
@@ -788,10 +804,12 @@ export default function WordBuilder() {
   // trying again later.
   const lockInDailyResultOnLeave = async () => {
     try {
-      const updatedDaily = await saveDailyResult(score, foundWords);
-      setDailyChallenge(updatedDaily);
+      // Same reasoning as the time-up handler: only ever set state from what
+      // saveDailyResult actually stored, never from the live score/foundWords.
+      const saveResult = await saveDailyResult(score, foundWords);
+      setDailyChallenge(saveResult.daily);
       setDailyPlayed(true);
-      setDailyResult({ score, words: foundWords });
+      setDailyResult({ score: saveResult.daily.lastDailyScore, words: saveResult.daily.lastDailyWords });
       resumedDailyRef.current = false;
       await clearDailyBuilderProgress();
       await refreshPlayerData();
@@ -903,6 +921,23 @@ export default function WordBuilder() {
       streak: dailyChallenge?.dailyStreak ?? 0,
     });
     try { await Share.share({ message }); } catch (e) {}
+  };
+
+  // Fetches today's actually-stored Daily result rather than reading local
+  // state, so View Results can never show a live, possibly-discarded score.
+  const openDailyResultsModal = async () => {
+    const todayResult = await getTodayDailyResult();
+    if (!todayResult.played) return;
+    const cachedLetters = await loadCachedDailyLetters();
+    const possibleWords = cachedLetters
+      ? findAllPossibleWords(cachedLetters.letters, todayResult.words)
+      : null;
+    setDailyResultsView({
+      score: todayResult.score,
+      foundCount: todayResult.words.length,
+      possibleWords,
+    });
+    setShowDailyResultModal(true);
   };
 
   const shareResult = async (opts: {
@@ -1260,7 +1295,7 @@ export default function WordBuilder() {
               <View style={styles.dailyActionRow}>
                 <TouchableOpacity
                   style={[styles.dailyActionButton, dynamicStyles.button, { borderWidth: 1.5 }]}
-                  onPress={() => setShowDailyResultModal(true)}
+                  onPress={openDailyResultsModal}
                 >
                   <Text style={[styles.dailyActionText, dynamicStyles.text]}>View Results</Text>
                 </TouchableOpacity>
@@ -1617,91 +1652,65 @@ export default function WordBuilder() {
       </Animated.View>
       </View>
 
-      {/* Daily results — native Modal + transparent card so this reads as a
-          full results SCREEN (cream page background, white stat pills), exactly
-          like Anagrams / Word Ladder / Furdle. Previously a solid white card on
-          a cream page, which looked like a floating white box. */}
-      <Modal
-        visible={showDailyResultModal && !!dailyResult}
-        transparent={false}
-        animationType="none"
-        statusBarTranslucent
-        presentationStyle="overFullScreen"
-        onRequestClose={() => setShowDailyResultModal(false)}
-      >
-        {dailyResult && (
-        <View style={[styles.modalOverlay, { backgroundColor: background.backgroundColor }]}>
-          <View style={[styles.modalPageHeader, { paddingTop: insets.top + 10 }]}>
-            <View style={styles.modalHeaderSpacer} />
-            <Text style={[styles.modalBrand, { color: background.secondaryText }]}>WORDSMITH</Text>
-            <Pressable
-              style={({ pressed }) => [styles.modalCloseIcon, { opacity: pressed ? 0.6 : 1 }]}
-              onPress={() => setShowDailyResultModal(false)}
-              hitSlop={16}
-            >
-              <X size={22} color={background.secondaryText} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={[styles.modalScrollContent, { paddingBottom: insets.bottom + 24 }]}
-            showsVerticalScrollIndicator={false}
-          >
-          <View style={styles.modalCard}>
-            <Text style={[styles.modalTitle, { color: background.textColor }]}>
-              {dailyResult.score >= 2000 ? 'Outstanding!' :
-               dailyResult.score >= 1000 ? 'Great Job!' :
-               dailyResult.score >= 500  ? 'Nice!' :
-               dailyResult.score >= 200  ? 'Good Game!' : 'Keep Practicing!'}
-            </Text>
-            <Text style={[styles.modalSubtitle, { color: background.secondaryText }]}>
-              You scored {dailyResult.score} pts and found {dailyResult.words.length} words.
-            </Text>
-
-            <View style={[styles.modalScoreBox, { borderColor: background.borderColor }]}>
-              <Text style={[styles.modalScoreBoxLabel, { color: background.secondaryText }]}>Score</Text>
-              <Text style={[styles.modalScoreBoxValue, { color: background.textColor }]}>{dailyResult.score}</Text>
-              <Text style={[styles.modalScoreBoxWords, { color: background.secondaryText }]}>{dailyResult.words.length} words found</Text>
-            </View>
-
-            <View style={[styles.modalDividerLine, { backgroundColor: background.borderColor }]} />
-            <Text style={[styles.modalSectionTitle, { color: background.textColor }]}>STATS</Text>
-            <View style={styles.modalStatsRow}>
-              <View style={[styles.modalStatPill, { borderColor: background.borderColor, backgroundColor: background.cardColor }]}>
-                <Text style={[styles.modalStatPillLabel, { color: background.textColor }]}>Streak</Text>
-                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.modalStatPillValue, { color: background.textColor }]}>{dailyChallenge?.dailyStreak ?? 0}</Text>
-              </View>
-              <View style={[styles.modalStatPill, { borderColor: background.borderColor, backgroundColor: background.cardColor }]}>
-                <Text style={[styles.modalStatPillLabel, { color: background.textColor }]}>Best</Text>
-                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.modalStatPillValue, { color: background.textColor }]}>{dailyChallenge?.bestDailyStreak ?? 0}</Text>
-              </View>
-            </View>
-
-            <View style={[styles.modalDividerLine, { backgroundColor: background.borderColor }]} />
-            <Text style={[styles.modalCountdownLabel, { color: background.secondaryText }]}>Next Daily in</Text>
-            <Text style={[styles.modalCountdownValue, { color: background.textColor }]}>{countdownToNextDaily}</Text>
-
-            <View style={styles.modalButtonRow}>
-              <TouchableOpacity
-                style={[styles.modalPillButton, styles.modalPillButtonFullWidth, { borderColor: background.borderColor, backgroundColor: background.cardColor }]}
-                onPress={() => { setShowDailyResultModal(false); backToAppMenu(); }}
-              >
-                <Text style={[styles.modalPillButtonText, { color: background.textColor }]}>Main Menu</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity style={styles.modalGreenShareBtn} onPress={shareDailyFromMenu}>
-              <View style={styles.modalShareBtnInner}>
-                <Share2 size={18} color="#fff" />
-                <Text style={styles.modalShareBtnText}>Share Result</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-          </ScrollView>
-        </View>
-        )}
-      </Modal>
+      {/* View Results, opened from the menu after the Daily is already
+          complete. Routed through the same shared ResultsScreen every other
+          game uses, driven by openDailyResultsModal's fresh storage read
+          (dailyResultsView), never by live round state. */}
+      {showDailyResultModal && dailyResultsView && (() => {
+        const foundCount = dailyResultsView.foundCount;
+        // null when today's letters were never cached (older build, or
+        // storage cleared) -- show what is actually known (found count,
+        // score) rather than a possible/completion figure recomputed from
+        // nothing, which would read as 0 of 0.
+        const viewStats = dailyResultsView.possibleWords
+          ? getPossibleWordsStats(dailyResultsView.possibleWords)
+          : null;
+        return (
+          <ResultsScreen
+            visible
+            gameName="WORDSMITH"
+            onClose={() => setShowDailyResultModal(false)}
+            title="Daily Complete!"
+            subtitle={viewStats
+              ? `${viewStats.totalFound} of ${viewStats.totalPossible} words · ${dailyResultsView.score} points`
+              : `${foundCount} word${foundCount === 1 ? '' : 's'} · ${dailyResultsView.score} points`}
+            cells={viewStats ? [
+              { label: 'FOUND', value: `${viewStats.totalFound}` },
+              { label: 'POSSIBLE', value: `${viewStats.totalPossible}` },
+              { label: 'SCORE', value: dailyResultsView.score.toLocaleString(), headline: true },
+            ] : [
+              { label: 'FOUND', value: `${foundCount}` },
+              { label: 'STREAK', value: `${dailyChallenge?.dailyStreak ?? 0}` },
+              { label: 'SCORE', value: dailyResultsView.score.toLocaleString(), headline: true },
+            ]}
+            groups={[
+              {
+                caption: 'THIS GAME',
+                rows: viewStats ? [
+                  { label: 'Words found', value: `${viewStats.totalFound}` },
+                  { label: 'Words possible', value: `${viewStats.totalPossible}` },
+                  { label: 'Completion', value: `${viewStats.percentFound}%`, tone: 'good' as const },
+                ] : [
+                  { label: 'Words found', value: `${foundCount}` },
+                ],
+              },
+              ...(dailyChallenge
+                ? [{
+                    caption: 'DAILY STREAK',
+                    rows: [
+                      { label: 'Current', value: `${dailyChallenge.dailyStreak}` },
+                      { label: 'Best', value: `${dailyChallenge.bestDailyStreak}` },
+                    ],
+                  }]
+                : []),
+            ]}
+            countdown={{ label: 'NEXT DAILY IN', value: countdownToNextDaily }}
+            onMainMenu={() => { setShowDailyResultModal(false); backToAppMenu(); }}
+            onShare={shareDailyFromMenu}
+            shareLabel="Share Result"
+          />
+        );
+      })()}
     </SafeAreaView>
   );
 }
@@ -1869,45 +1878,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Daily result modal
-  // Inside a native Modal, so this fills the screen on its own.
-  modalOverlay: { flex: 1 },
-  modalPageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  modalHeaderSpacer: { width: 22 },
-  modalCloseIcon: { width: 22, alignItems: 'flex-end' },
-  modalScrollContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 18 },
-  // Transparent — the page background shows through, matching the other games'
-  // result screens. A solid cardColor here is what made it look like a box.
-  modalCard: { width: '100%', maxWidth: 420, borderRadius: 18, padding: 8 },
-  modalBrand: { textAlign: 'center', fontSize: 12, fontWeight: '900', letterSpacing: 2 },
-  modalTitle: { textAlign: 'center', fontSize: 24, fontWeight: '900', marginBottom: 8, marginTop: 20 },
-  modalSubtitle: { textAlign: 'center', fontSize: 14, fontWeight: '600', marginBottom: 12 },
-  modalScoreBox: { borderWidth: 2, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12, alignItems: 'center', marginBottom: 4 },
-  modalScoreBoxLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 1, marginBottom: 4 },
-  modalScoreBoxValue: { fontSize: 40, fontWeight: '900', letterSpacing: 2 },
-  modalScoreBoxWords: { fontSize: 13, fontWeight: '600', marginTop: 2 },
-  modalDividerLine: { height: 1, marginVertical: 12, opacity: 0.35 },
-  modalSectionTitle: { fontSize: 14, fontWeight: '900', marginBottom: 8, textAlign: 'center', letterSpacing: 1 },
-  modalStatsRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 },
-  modalStatPill: { borderWidth: 2, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12, minWidth: 120, alignItems: 'center', justifyContent: 'center' },
-  modalStatPillLabel: { fontSize: 11, fontWeight: '800', opacity: 0.8, marginBottom: 2 },
-  modalStatPillValue: { fontSize: 14, fontWeight: '900', textAlign: 'center' },
-  modalCountdownLabel: { textAlign: 'center', fontSize: 12, fontWeight: '800', marginBottom: 4, letterSpacing: 1 },
-  modalCountdownValue: { textAlign: 'center', fontSize: 18, fontWeight: '900', letterSpacing: 1, marginBottom: 4 },
-  modalButtonRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 24 },
-  modalPillButton: { borderWidth: 2, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, minWidth: 120, alignItems: 'center' },
-  modalPillButtonFullWidth: { width: '100%', paddingVertical: 12, minWidth: undefined },
-  modalPillButtonText: { fontSize: 13, fontWeight: '900', letterSpacing: 1 },
-  modalGreenShareBtn: { marginTop: 18, borderRadius: 999, paddingVertical: 12, paddingHorizontal: 20, alignItems: 'center', backgroundColor: '#22c55e' },
-  modalShareBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  modalShareBtnText: { fontSize: 15, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
   // Countdown Timer
   dailyCountdownContainer: {
     alignItems: 'center',

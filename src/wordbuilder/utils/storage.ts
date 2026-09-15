@@ -345,16 +345,21 @@ export const getTodayDailyResult = async (): Promise<{
   return { played: false, score: 0, words: [] };
 };
 
-export const saveDailyResult = async (score: number, words: string[]): Promise<DailyChallenge> => {
+export const saveDailyResult = async (
+  score: number,
+  words: string[]
+): Promise<{ daily: DailyChallenge; wrote: boolean }> => {
   const daily = await loadDailyChallenge();
   const today = getTodayDateString();
   const yesterday = getYesterdayDateString();
-  
-  // Don't save if already played today
+
+  // Don't save if already played today. The caller must not treat score/words
+  // as today's result in this case -- daily.lastDailyScore/lastDailyWords
+  // still hold whatever was actually saved earlier today.
   if (daily.lastPlayedDate === today) {
-    return daily;
+    return { daily, wrote: false };
   }
-  
+
   // Update streak
   if (daily.lastPlayedDate === yesterday) {
     // Played yesterday, continue streak
@@ -363,24 +368,24 @@ export const saveDailyResult = async (score: number, words: string[]): Promise<D
     // Didn't play yesterday (or first time), start/reset streak
     daily.dailyStreak = 1;
   }
-  
+
   // Update best streak
   daily.bestDailyStreak = Math.max(daily.bestDailyStreak, daily.dailyStreak);
-  
+
   // Update cumulative stats
   daily.dailyGamesPlayed += 1;
   daily.dailyTotalScore += score;
   daily.dailyTotalWords += words.length;
   daily.bestDailyScore = Math.max(daily.bestDailyScore, score);
   daily.bestDailyWords = Math.max(daily.bestDailyWords, words.length);
-  
+
   // Update today's result
   daily.lastPlayedDate = today;
   daily.lastDailyScore = score;
   daily.lastDailyWords = words;
-  
+
   await saveDailyChallenge(daily);
-  return daily;
+  return { daily, wrote: true };
 };
 
 // ==================== DAILY IN-PROGRESS AUTOSAVE ====================
