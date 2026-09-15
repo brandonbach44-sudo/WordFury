@@ -41,6 +41,7 @@ import { maybeRequestReview } from '../../src/shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../src/shared/dailyReminders';
 import { AchievementPopup } from '../../src/shared/AchievementPopup';
 import WordSearchResultOverlay, { type WordSearchResultData } from '../../src/wordsearch/components/WordSearchResultOverlay';
+import { incrementWordSearchPracticeRoundsThisSession } from '../../src/wordsearch/utils/sessionStats';
 
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -226,6 +227,7 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
   );
   const [lifetimeStats, setLifetimeStats] = useState<WordSearchStats | null>(null);
   const [pendingAchievements, setPendingAchievements] = useState<WSAchievement[]>([]);
+  const [roundsThisSession, setRoundsThisSession] = useState(0);
 
   // Resume from a previous session: the puzzle grid is deterministic per
   // day (same seed), so we can match saved word strings back against
@@ -544,6 +546,7 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
 
       if (!isDaily) {
         clearWordSearchPracticeProgress().catch(() => {});
+        setRoundsThisSession(incrementWordSearchPracticeRoundsThisSession());
       }
 
       if (isDaily) {
@@ -862,6 +865,7 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
           difficulty={difficulty}
           resultData={resultData}
           lifetimeStats={lifetimeStats}
+          roundsThisSession={roundsThisSession}
           nextDailySecondsRemaining={dailyCountdownSeconds}
           onClose={() => setResultData(null)}
           onPlayAgain={() => router.replace({ pathname: '/wordsearch/game', params: { themeId, difficulty } })}

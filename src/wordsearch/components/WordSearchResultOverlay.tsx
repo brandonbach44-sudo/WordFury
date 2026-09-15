@@ -10,14 +10,13 @@
 // it out structurally prevents that class of bug instead of relying on
 // remembering to keep it in sync by hand.
 
-import React, { useState } from 'react';
-import { Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { Eye, EyeOff } from 'lucide-react-native';
+import React from 'react';
+import { Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { useTheme } from '../../shared/ThemeContext';
 import { useSemanticColors } from '../../shared/semanticColors';
 import { AchievementPopup, AchievementLike } from '../../shared/AchievementPopup';
-import { ResultsScreen } from '../../shared/ResultsScreen';
+import { ResultsScreen, type ChipSpec, type LifetimeSpec, type PillTriple } from '../../shared/ResultsScreen';
 import { DIRECTION_VECTORS, type PlacedWord } from '../utils/generator';
 import type { WordSearchStats } from '../utils/wsStorage';
 import type { WSAchievement } from '../utils/wsAchievements';
@@ -44,6 +43,9 @@ type Props = {
   difficulty: string;
   resultData: WordSearchResultData;
   lifetimeStats: WordSearchStats | null;
+  // Quick Play's third pill: rounds finished this sitting, never persisted.
+  // Not meaningful on Daily, where at most one round is ever played.
+  roundsThisSession?: number;
   nextDailySecondsRemaining?: number | null;
   onClose: () => void;
   onPlayAgain: () => void;
@@ -86,6 +88,7 @@ const WordSearchResultOverlay: React.FC<Props> = ({
   difficulty,
   resultData,
   lifetimeStats,
+  roundsThisSession = 0,
   nextDailySecondsRemaining,
   onClose,
   onPlayAgain,
@@ -104,7 +107,6 @@ const WordSearchResultOverlay: React.FC<Props> = ({
   const semantic = useSemanticColors();
   const { width: windowWidth } = useWindowDimensions();
   const isDaily = mode === 'daily';
-  const [showAnswerKey, setShowAnswerKey] = useState(false);
 
   // Available on both Daily and Practice: by the time this screen shows,
   // the player's own attempt (and score, for Daily) is already locked in,
@@ -137,6 +139,40 @@ const WordSearchResultOverlay: React.FC<Props> = ({
     : foundWordsUnknown
     ? `You already completed today's puzzle.`
     : `You found ${resultData.foundWords}/${resultData.totalWords} words in ${resultData.timeString}.`;
+
+  const difficultyLabel = difficulty ? `${difficulty.charAt(0).toUpperCase()}${difficulty.slice(1)}` : '';
+  const badge = [
+    ...(isDaily ? [] : ['Quick Play']),
+    themeName,
+    ...(difficultyLabel ? [difficultyLabel] : []),
+    ...(resultData.multiplier > 1 ? [`${resultData.multiplier}x`] : []),
+  ];
+
+  // The hero note carries the round summary, e.g. how a time bonus padded
+  // the score. The multiplier lives in the badge instead, since it describes
+  // the puzzle's difficulty setting rather than something that happened
+  // during the round.
+  const heroNoteParts: string[] = [];
+  if (resultData.timeBonus > 0) heroNoteParts.push(`+${resultData.timeBonus} time bonus`);
+
+  const pills: PillTriple = isDaily
+    ? [
+        { label: 'Found', value: foundWordsUnknown ? '-' : `${resultData.foundWords}/${resultData.totalWords}` },
+        { label: 'Time', value: resultData.timeString },
+        { label: 'Streak', value: `${lifetimeStats?.currentStreak ?? 0}` },
+      ]
+    : [
+        { label: 'Found', value: foundWordsUnknown ? '-' : `${resultData.foundWords}/${resultData.totalWords}` },
+        { label: 'Time', value: resultData.timeString },
+        // Quick Play has no daily streak to show, and "Best" would just
+        // repeat the lifetime ghost pill directly below it, so the third
+        // pill is this sitting's round count instead.
+        { label: 'Rounds', value: `${roundsThisSession}` },
+      ];
+
+  const chips: ChipSpec[] | undefined = puzzleWords
+    ? puzzleWords.map((w) => ({ label: w.word, highlighted: foundSet.has(w.word) }))
+    : undefined;
 
   // Progress bar instead of listing which words were found — the Daily
   // theme's word list is shared by everyone that day, so naming specific
@@ -179,149 +215,121 @@ const WordSearchResultOverlay: React.FC<Props> = ({
     }
   };
 
-  // Same reasoning as every other game's result overlay — Modal instead of
-  // an absolutely-positioned View so this always covers the full screen
-  // exactly the same way, regardless of the parent play screen's layout.
-  const answerKey = canShowAnswerKey ? (
-    <View style={{ marginTop: 4 }}>
-      <>
-        <View style={[styles.divider, { backgroundColor: BORDER }]} />
-        <Pressable
-          style={({ pressed }) => [
-            styles.answerKeyToggle,
-            { borderColor: BORDER, backgroundColor: CARD, opacity: pressed ? 0.75 : 1 },
-          ]}
-          onPress={() => setShowAnswerKey((v) => !v)}
-        >
-          {showAnswerKey ? <EyeOff size={16} color={TEXT} /> : <Eye size={16} color={TEXT} />}
-          <Text style={[styles.answerKeyToggleText, { color: TEXT }]}>
-            {showAnswerKey ? 'Hide Answer Key' : 'Show Answer Key'}
-          </Text>
-        </Pressable>
+  // The toggle button itself is now rendered by ResultsScreen (the `toggle`
+  // prop); this is just the legend + grid it shows when expanded.
+  const answerKeyContent = canShowAnswerKey ? (
+    <View>
+      <View style={styles.answerKeyLegend}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendSwatch, { backgroundColor: semantic.correct }]} />
+          <Text style={[styles.legendText, { color: SUBTEXT }]}>Found</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendSwatch, { backgroundColor: semantic.wrong }]} />
+          <Text style={[styles.legendText, { color: SUBTEXT }]}>Missed</Text>
+        </View>
+      </View>
+      {(() => {
+        const grid = puzzleGrid!;
+        const cols = grid[0]?.length ?? 1;
+        const cellSize = Math.max(14, Math.min(26, Math.floor((Math.min(windowWidth, 420) - 56) / cols)));
 
-        {showAnswerKey && (
-          <View style={styles.answerKeyWrap}>
-            <View style={styles.answerKeyLegend}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendSwatch, { backgroundColor: semantic.correct }]} />
-                <Text style={[styles.legendText, { color: SUBTEXT }]}>Found</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendSwatch, { backgroundColor: semantic.wrong }]} />
-                <Text style={[styles.legendText, { color: SUBTEXT }]}>Missed</Text>
-              </View>
-            </View>
-            {(() => {
-              const grid = puzzleGrid!;
-              const cols = grid[0]?.length ?? 1;
-              const cellSize = Math.max(14, Math.min(26, Math.floor((Math.min(windowWidth, 420) - 56) / cols)));
+        // Cell -> color, missed words drawn after found words so
+        // an intersection between a found and missed word still
+        // reads clearly as "missed" (the more useful signal).
+        const cellColor = new Map<string, string>();
+        for (const w of puzzleWords!) {
+          if (!foundSet.has(w.word)) continue;
+          for (const c of wordCells(w)) cellColor.set(`${c.row},${c.col}`, semantic.correct);
+        }
+        for (const w of puzzleWords!) {
+          if (foundSet.has(w.word)) continue;
+          for (const c of wordCells(w)) cellColor.set(`${c.row},${c.col}`, semantic.wrong);
+        }
 
-              // Cell -> color, missed words drawn after found words so
-              // an intersection between a found and missed word still
-              // reads clearly as "missed" (the more useful signal).
-              const cellColor = new Map<string, string>();
-              for (const w of puzzleWords!) {
-                if (!foundSet.has(w.word)) continue;
-                for (const c of wordCells(w)) cellColor.set(`${c.row},${c.col}`, semantic.correct);
-              }
-              for (const w of puzzleWords!) {
-                if (foundSet.has(w.word)) continue;
-                for (const c of wordCells(w)) cellColor.set(`${c.row},${c.col}`, semantic.wrong);
-              }
-
-              return (
-                <View style={[styles.answerKeyGrid, { borderColor: BORDER }]}>
-                  {grid.map((row, rIdx) => (
-                    <View key={rIdx} style={{ flexDirection: 'row' }}>
-                      {row.map((letter, cIdx) => {
-                        const fill = cellColor.get(`${rIdx},${cIdx}`);
-                        return (
-                          <View
-                            key={cIdx}
-                            style={[
-                              styles.answerKeyCell,
-                              {
-                                width: cellSize,
-                                height: cellSize,
-                                backgroundColor: fill ? `${fill}33` : CARD,
-                                borderColor: BORDER,
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.answerKeyCellText,
-                                { fontSize: Math.max(8, cellSize * 0.42), color: fill ?? TEXT },
-                              ]}
-                            >
-                              {letter}
-                            </Text>
-                          </View>
-                        );
-                      })}
+        return (
+          <View style={[styles.answerKeyGrid, { borderColor: BORDER }]}>
+            {grid.map((row, rIdx) => (
+              <View key={rIdx} style={{ flexDirection: 'row' }}>
+                {row.map((letter, cIdx) => {
+                  const fill = cellColor.get(`${rIdx},${cIdx}`);
+                  return (
+                    <View
+                      key={cIdx}
+                      style={[
+                        styles.answerKeyCell,
+                        {
+                          width: cellSize,
+                          height: cellSize,
+                          backgroundColor: fill ? `${fill}33` : CARD,
+                          borderColor: BORDER,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.answerKeyCellText,
+                          { fontSize: Math.max(8, cellSize * 0.42), color: fill ?? TEXT },
+                        ]}
+                      >
+                        {letter}
+                      </Text>
                     </View>
-                  ))}
-                </View>
-              );
-            })()}
+                  );
+                })}
+              </View>
+            ))}
           </View>
-        )}
-      </>
+        );
+      })()}
     </View>
   ) : null;
 
+  const lifetime: LifetimeSpec | undefined = lifetimeStats
+    ? {
+        pills: [
+          { label: 'Best', value: lifetimeStats.bestScore.toLocaleString() },
+          { label: 'Played', value: `${lifetimeStats.gamesPlayed}` },
+          { label: 'Words', value: lifetimeStats.totalWordsFound.toLocaleString() },
+        ],
+      }
+    : undefined;
+
+  const commonProps = {
+    visible,
+    gameName: 'WORD SEARCH',
+    onClose,
+    title,
+    subtitle,
+    badge,
+    hero: {
+      label: 'Score',
+      value: resultData.score.toLocaleString(),
+      note: heroNoteParts.length > 0 ? heroNoteParts.join(', ') : undefined,
+    },
+    pills,
+    chips,
+    toggle: answerKeyContent ? { label: 'Answer Key', content: answerKeyContent } : undefined,
+    lifetime,
+    onMainMenu: onGoHome,
+    onShare: handleShare,
+    shareLabel: 'Share Result',
+  };
 
   return (
     <>
-      <ResultsScreen
-        visible={visible}
-        gameName="WORD SEARCH"
-        onClose={onClose}
-        title={title}
-        subtitle={subtitle}
-        badge={`${themeName}${difficulty ? ` \u00b7 ${difficulty.charAt(0).toUpperCase()}${difficulty.slice(1)}` : ''}${resultData.multiplier > 1 ? ` \u00b7 ${resultData.multiplier}\u00d7` : ''}`}
-        cells={[
-          { label: 'FOUND', value: foundWordsUnknown ? '\u2014' : `${resultData.foundWords}/${resultData.totalWords}` },
-          { label: 'TIME', value: resultData.timeString },
-          { label: 'SCORE', value: resultData.score.toLocaleString(), headline: true },
-        ]}
-        groups={[
-          {
-            caption: 'HOW THAT SCORE HAPPENED',
-            rows: [
-              { label: 'Words', value: (resultData.score - resultData.timeBonus).toLocaleString() },
-              ...(resultData.timeBonus > 0
-                ? [{ label: 'Time bonus', value: `+${resultData.timeBonus}`, tone: 'good' as const }]
-                : []),
-              ...(resultData.multiplier > 1
-                ? [{ label: 'Challenge multiplier', value: `\u00d7${resultData.multiplier}`, tone: 'warn' as const }]
-                : []),
-              { label: 'TOTAL', value: resultData.score.toLocaleString(), total: true },
-            ],
-          },
-          ...(lifetimeStats
-            ? [{
-                caption: 'ALL TIME',
-                rows: [
-                  { label: 'Best score', value: lifetimeStats.bestScore.toLocaleString() },
-                  { label: 'Streak', value: `${lifetimeStats.currentStreak} ${lifetimeStats.currentStreak === 1 ? 'day' : 'days'}` },
-                  { label: 'Games played', value: `${lifetimeStats.gamesPlayed}` },
-                  { label: 'Words found', value: lifetimeStats.totalWordsFound.toLocaleString() },
-                ],
-              }]
-            : []),
-        ]}
-        countdown={
-          isDaily && nextDailySecondsRemaining != null && nextDailySecondsRemaining > 0
-            ? { label: 'NEXT DAILY IN', value: formatCountdown(nextDailySecondsRemaining) }
-            : null
-        }
-        extra={answerKey}
-        onMainMenu={onGoHome}
-        onPlayAgain={isDaily ? undefined : onPlayAgain}
-        onShare={handleShare}
-        shareLabel="Share Result"
-      />
+      {isDaily ? (
+        <ResultsScreen
+          {...commonProps}
+          countdown={
+            nextDailySecondsRemaining != null && nextDailySecondsRemaining > 0
+              ? { label: 'Next daily in', value: formatCountdown(nextDailySecondsRemaining) }
+              : undefined
+          }
+        />
+      ) : (
+        <ResultsScreen {...commonProps} onPlayAgain={onPlayAgain} />
+      )}
       <AchievementPopup
         achievements={achievements}
         onDismiss={onDismissAchievement ?? (() => {})}
@@ -335,20 +343,6 @@ const WordSearchResultOverlay: React.FC<Props> = ({
 export default WordSearchResultOverlay;
 
 const styles = StyleSheet.create({
-  divider: { height: 1, marginVertical: 22, opacity: 0.35 },
-  answerKeyToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    alignSelf: 'center',
-    borderWidth: 2,
-    borderRadius: 999,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  answerKeyToggleText: { fontSize: 13, fontWeight: '800', letterSpacing: 0.3 },
-  answerKeyWrap: { alignItems: 'center', marginTop: 16 },
   answerKeyLegend: { flexDirection: 'row', gap: 18, marginBottom: 10 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendSwatch: { width: 12, height: 12, borderRadius: 3 },
