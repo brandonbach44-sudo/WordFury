@@ -5,6 +5,9 @@
 // languages, zodiac signs, mythology, etc.)
 // 2026-07-10: trimmed to zipf>=2.0, slurs removed; 43 pangram-critical
 // words restored below the cutoff to keep existing Hex Hive puzzles solvable.
+// A small number of other below-cutoff words are kept as deliberate
+// exceptions too (e.g. "dule", from a tester report) -- not every word
+// under the cutoff is here for solvability.
 
 export const VALID_WORDS = new Set([
 'aardvark',
