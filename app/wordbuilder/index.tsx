@@ -35,7 +35,8 @@ import { recordRejectedWord } from '../../src/shared/wordReports';
 
 // Theme
 import { useTheme } from '../../src/shared/ThemeContext';
-import { ResultsScreen } from '../../src/shared/ResultsScreen';
+import { ResultsScreen, Card, Pill } from '../../src/shared/ResultsScreen';
+import Svg, { Circle } from 'react-native-svg';
 import { COLORS } from '../../src/shared/theme';
 import { maybeRequestReview } from '../../src/shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../src/shared/dailyReminders';
@@ -384,7 +385,9 @@ export default function WordBuilder() {
   const [message, setMessage] = useState('Tap letters to build words!');
   const [timeLeft, setTimeLeft] = useState(0);
   const [gameOver, setGameOver] = useState(false);
-  const [showWordList, setShowWordList] = useState(false);
+  // Quick Play's (Blitz/Standard) results screen shows this instead of a
+  // daily streak, which doesn't apply outside the Daily.
+  const [roundsThisSession, setRoundsThisSession] = useState(0);
   // Height of the pinned bottom footer (buttons + share + page dots), measured
   // via onLayout so the scrollable pages above can pad themselves out by
   // exactly that much and never render content underneath it.
@@ -548,8 +551,10 @@ export default function WordBuilder() {
       }
     } else if (timeLeft === 0 && gameMode !== 'menu' && !gameOver) {
       setGameOver(true);
-      setShowWordList(false);
       setMessage('Time\'s up!');
+      if (gameMode !== 'daily') {
+        setRoundsThisSession((r) => r + 1);
+      }
       
       // Game over feedback
       HapticManager.gameOver();
@@ -659,7 +664,6 @@ export default function WordBuilder() {
       setCurrentWord('');
       setMessage('Tap letters to build words!');
       setGameOver(false);
-      setShowWordList(false);
       setPossibleWords([]);
       return;
     }
@@ -687,7 +691,6 @@ export default function WordBuilder() {
     setFoundWords([]);
     setMessage('Tap letters to build words!');
     setGameOver(false);
-    setShowWordList(false);
     setPossibleWords([]);
     setTimeLeft(60);
   };
@@ -702,7 +705,6 @@ export default function WordBuilder() {
     setFoundWords([]);
     setMessage('Tap letters to build words!');
     setGameOver(false);
-    setShowWordList(false);
     setPossibleWords([]);
     setTimeLeft(mode === 'blitz' ? 30 : 60);
   };
@@ -797,7 +799,6 @@ export default function WordBuilder() {
   const backToMenu = () => {
     setGameMode('menu');
     setGameOver(false);
-    setShowWordList(false);
     setPossibleWords([]);
     if (timerRef.current) clearTimeout(timerRef.current);
   };
@@ -980,99 +981,145 @@ export default function WordBuilder() {
     button: { backgroundColor: background.backgroundColor, borderColor: background.borderColor },
   };
 
+  // The one signature card both the just-finished screen and the "View
+  // Results" re-open from the menu use: a progress ring (found/possible)
+  // plus the four stats the redesign moved off the old pill row. The ring's
+  // centre reads the found count rather than a percentage -- "4 of 14"
+  // means something, "29%" doesn't. `possible` is null for the rare
+  // legacy-data fallback (see openDailyResultsModal), where the ring simply
+  // can't show a fraction.
+  const renderWordsmithRing = (opts: {
+    found: number;
+    possible: number | null;
+    longestWord: string | null;
+    fourthStat: { label: string; value: string };
+  }) => {
+    const ringSize = 132;
+    const strokeWidth = 12;
+    const radius = (ringSize - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const fraction = opts.possible && opts.possible > 0 ? opts.found / opts.possible : 0;
+
+    return (
+      <Card padding={16} style={styles.ringCard}>
+        <View style={styles.ringWrap}>
+          <Svg width={ringSize} height={ringSize}>
+            <Circle
+              cx={ringSize / 2}
+              cy={ringSize / 2}
+              r={radius}
+              stroke={background.borderColor}
+              strokeOpacity={0.35}
+              strokeWidth={strokeWidth}
+              fill="none"
+            />
+            <Circle
+              cx={ringSize / 2}
+              cy={ringSize / 2}
+              r={radius}
+              stroke={background.accentColor}
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              strokeDasharray={`${circumference} ${circumference}`}
+              strokeDashoffset={circumference * (1 - fraction)}
+              fill="none"
+              rotation="-90"
+              origin={`${ringSize / 2}, ${ringSize / 2}`}
+            />
+          </Svg>
+          <View style={styles.ringCenter} pointerEvents="none">
+            <Text style={[styles.ringValue, { color: background.textColor }]}>{opts.found}</Text>
+            <Text style={[styles.ringLabel, { color: background.secondaryText }]}>WORDS</Text>
+          </View>
+        </View>
+        <View style={styles.ringStatsRow}>
+          <View style={styles.ringStatFlex}>
+            <Pill label="Found" value={`${opts.found}`} />
+          </View>
+          <View style={styles.ringStatFlex}>
+            <Pill label="Possible" value={opts.possible != null ? `${opts.possible}` : '\u2014'} />
+          </View>
+          <View style={styles.ringStatFlex}>
+            <Pill label="Longest" value={opts.longestWord ? opts.longestWord.toUpperCase() : '\u2014'} />
+          </View>
+          <View style={styles.ringStatFlex}>
+            <Pill label={opts.fourthStat.label} value={opts.fourthStat.value} />
+          </View>
+        </View>
+      </Card>
+    );
+  };
+
   // ==================== GAME OVER SCREEN ====================
   if (gameOver) {
     const isDaily = gameMode === 'daily';
     const stats = getPossibleWordsStats(possibleWords);
+    const modeLabel = !isDaily ? (gameMode === 'blitz' ? 'Blitz \u00b7 30s' : 'Standard \u00b7 60s') : undefined;
+
+    const foundEntries = possibleWords.filter((w) => w.found);
+    const longestFound = foundEntries.length > 0
+      ? foundEntries.reduce((longest, w) => (w.word.length > longest.word.length ? w : longest), foundEntries[0])
+      : null;
 
     // The possible-word list was a second swipe page of its own. It is worth
     // keeping (seeing what you missed is half the appeal), so it stays as a
     // toggle here, collapsed by default, rather than a page the shared layout
     // has no concept of.
-    const wordList = possibleWords.length > 0 ? (
-      <View style={{ marginTop: 22 }}>
-        <Pressable
-          onPress={() => setShowWordList((v) => !v)}
-          style={({ pressed }) => [
-            styles.wordListToggle,
-            { borderColor: background.borderColor, backgroundColor: background.cardColor, opacity: pressed ? 0.75 : 1 },
-          ]}
-        >
-          <Text style={[styles.wordListToggleText, { color: background.textColor }]}>
-            {showWordList ? 'Hide words' : `Show all ${possibleWords.length} possible words`}
-          </Text>
-        </Pressable>
-        {showWordList && (
-          <View style={{ marginTop: 10 }}>
-            {possibleWords.map((item) => (
-              <View key={item.word} style={styles.wordListRow}>
-                <Text
-                  style={[
-                    styles.wordListWord,
-                    { color: item.found ? background.accentColor : background.secondaryText },
-                  ]}
-                >
-                  {item.word}
-                </Text>
-                <Text style={[styles.wordListPoints, { color: background.secondaryText }]}>
-                  {item.score} pts
-                </Text>
-              </View>
-            ))}
+    const wordListContent = possibleWords.length > 0 ? (
+      <View>
+        {possibleWords.map((item) => (
+          <View key={item.word} style={styles.wordListRow}>
+            <Text
+              style={[
+                styles.wordListWord,
+                { color: item.found ? background.accentColor : background.secondaryText },
+              ]}
+            >
+              {item.word}
+            </Text>
+            <Text style={[styles.wordListPoints, { color: background.secondaryText }]}>
+              {item.score} pts
+            </Text>
           </View>
-        )}
+        ))}
       </View>
     ) : null;
 
-    return (
-      <ResultsScreen
-        visible
-        gameName="WORDSMITH"
-        onClose={backToMenu}
-        title={isDaily ? "Daily Complete!" : "Time's Up!"}
-        subtitle={`${stats.totalFound} of ${stats.totalPossible} words \u00b7 ${score} points`}
-        badge={!isDaily ? (gameMode === 'blitz' ? 'Blitz \u00b7 30s' : 'Standard \u00b7 60s') : undefined}
-        cells={[
-          { label: 'FOUND', value: `${stats.totalFound}` },
-          { label: 'POSSIBLE', value: `${stats.totalPossible}` },
-          { label: 'SCORE', value: score.toLocaleString(), headline: true },
-        ]}
-        groups={[
-          {
-            caption: 'THIS GAME',
-            rows: [
-              { label: 'Words found', value: `${stats.totalFound}` },
-              { label: 'Words possible', value: `${stats.totalPossible}` },
-              { label: 'Completion', value: `${stats.percentFound}%`, tone: 'good' as const },
-            ],
-          },
-          ...(isDaily && dailyChallenge
-            ? [{
-                caption: 'DAILY STREAK',
-                rows: [
-                  { label: 'Current', value: `${dailyChallenge.dailyStreak}` },
-                  { label: 'Best', value: `${dailyChallenge.bestDailyStreak}` },
-                ],
-              }]
-            : []),
-        ]}
-        extra={
-          <>
-            {wordList}
-            <WordReportPrompt />
-          </>
-        }
-        onMainMenu={backToMenu}
-        onPlayAgain={!isDaily ? () => startPracticeGame(gameMode as 'blitz' | 'standard', letterCount) : undefined}
-        onShare={() => shareResult({
-          isDaily,
-          totalFound: stats.totalFound,
-          totalPossible: stats.totalPossible,
-          percentFound: stats.percentFound,
-          modeLabel: !isDaily ? (gameMode === 'blitz' ? 'Blitz \u00b7 30s' : 'Standard \u00b7 60s') : undefined,
-        })}
-        shareLabel="Share Result"
-      />
+    const signature = renderWordsmithRing({
+      found: stats.totalFound,
+      possible: stats.totalPossible,
+      longestWord: longestFound?.word ?? null,
+      fourthStat: isDaily
+        ? { label: 'Streak', value: `${dailyChallenge?.dailyStreak ?? 0}` }
+        : { label: 'Rounds', value: `${roundsThisSession}` },
+    });
+
+    const commonProps = {
+      visible: true as const,
+      gameName: 'WORDSMITH',
+      onClose: backToMenu,
+      title: isDaily ? "Daily Complete!" : "Time's Up!",
+      subtitle: `${stats.totalFound} of ${stats.totalPossible} words \u00b7 ${score} points`,
+      badge: modeLabel ? [modeLabel] : undefined,
+      hero: { label: 'Score', value: score.toLocaleString() },
+      signature,
+      toggle: wordListContent ? { label: 'Possible Words', content: wordListContent } : undefined,
+      extra: <WordReportPrompt />,
+      onMainMenu: backToMenu,
+      onShare: () => shareResult({
+        isDaily,
+        totalFound: stats.totalFound,
+        totalPossible: stats.totalPossible,
+        percentFound: stats.percentFound,
+        modeLabel,
+      }),
+      shareLabel: 'Share Result',
+    };
+
+    return isDaily ? (
+      <ResultsScreen {...commonProps} />
+    ) : (
+      <ResultsScreen {...commonProps} onPlayAgain={() => startPracticeGame(gameMode as 'blitz' | 'standard', letterCount)} />
     );
   }
 
@@ -1670,6 +1717,30 @@ export default function WordBuilder() {
         const viewStats = dailyResultsView.possibleWords
           ? getPossibleWordsStats(dailyResultsView.possibleWords)
           : null;
+        const viewFoundEntries = dailyResultsView.possibleWords?.filter((w) => w.found) ?? [];
+        const viewLongest = viewFoundEntries.length > 0
+          ? viewFoundEntries.reduce((longest, w) => (w.word.length > longest.word.length ? w : longest), viewFoundEntries[0])
+          : null;
+        const viewWordListContent = dailyResultsView.possibleWords && dailyResultsView.possibleWords.length > 0 ? (
+          <View>
+            {dailyResultsView.possibleWords.map((item) => (
+              <View key={item.word} style={styles.wordListRow}>
+                <Text
+                  style={[
+                    styles.wordListWord,
+                    { color: item.found ? background.accentColor : background.secondaryText },
+                  ]}
+                >
+                  {item.word}
+                </Text>
+                <Text style={[styles.wordListPoints, { color: background.secondaryText }]}>
+                  {item.score} pts
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null;
+
         return (
           <ResultsScreen
             visible
@@ -1679,37 +1750,15 @@ export default function WordBuilder() {
             subtitle={viewStats
               ? `${viewStats.totalFound} of ${viewStats.totalPossible} words · ${dailyResultsView.score} points`
               : `${foundCount} word${foundCount === 1 ? '' : 's'} · ${dailyResultsView.score} points`}
-            cells={viewStats ? [
-              { label: 'FOUND', value: `${viewStats.totalFound}` },
-              { label: 'POSSIBLE', value: `${viewStats.totalPossible}` },
-              { label: 'SCORE', value: dailyResultsView.score.toLocaleString(), headline: true },
-            ] : [
-              { label: 'FOUND', value: `${foundCount}` },
-              { label: 'STREAK', value: `${dailyChallenge?.dailyStreak ?? 0}` },
-              { label: 'SCORE', value: dailyResultsView.score.toLocaleString(), headline: true },
-            ]}
-            groups={[
-              {
-                caption: 'THIS GAME',
-                rows: viewStats ? [
-                  { label: 'Words found', value: `${viewStats.totalFound}` },
-                  { label: 'Words possible', value: `${viewStats.totalPossible}` },
-                  { label: 'Completion', value: `${viewStats.percentFound}%`, tone: 'good' as const },
-                ] : [
-                  { label: 'Words found', value: `${foundCount}` },
-                ],
-              },
-              ...(dailyChallenge
-                ? [{
-                    caption: 'DAILY STREAK',
-                    rows: [
-                      { label: 'Current', value: `${dailyChallenge.dailyStreak}` },
-                      { label: 'Best', value: `${dailyChallenge.bestDailyStreak}` },
-                    ],
-                  }]
-                : []),
-            ]}
-            countdown={{ label: 'NEXT DAILY IN', value: countdownToNextDaily }}
+            hero={{ label: 'Score', value: dailyResultsView.score.toLocaleString() }}
+            signature={renderWordsmithRing({
+              found: viewStats ? viewStats.totalFound : foundCount,
+              possible: viewStats ? viewStats.totalPossible : null,
+              longestWord: viewLongest?.word ?? null,
+              fourthStat: { label: 'Streak', value: `${dailyChallenge?.dailyStreak ?? 0}` },
+            })}
+            toggle={viewWordListContent ? { label: 'Possible Words', content: viewWordListContent } : undefined}
+            countdown={{ label: 'Next daily in', value: countdownToNextDaily }}
             onMainMenu={() => { setShowDailyResultModal(false); backToAppMenu(); }}
             onShare={shareDailyFromMenu}
             shareLabel="Share Result"
@@ -2222,13 +2271,6 @@ const styles = StyleSheet.create({
   },
 
   // Game Over Screen
-  wordListToggle: {
-    borderWidth: 2,
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  wordListToggleText: { fontSize: 14, fontWeight: '800' },
   wordListRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2237,6 +2279,14 @@ const styles = StyleSheet.create({
   },
   wordListWord: { fontSize: 14, fontWeight: '700' },
   wordListPoints: { fontSize: 13, fontWeight: '600' },
+  // Results screen -- progress ring signature card
+  ringCard: { marginTop: 16, alignItems: 'center' },
+  ringWrap: { width: 132, height: 132, alignItems: 'center', justifyContent: 'center' },
+  ringCenter: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  ringValue: { fontSize: 36, fontWeight: '900' },
+  ringLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1.4, marginTop: 2 },
+  ringStatsRow: { flexDirection: 'row', gap: 8, marginTop: 16, alignSelf: 'stretch' },
+  ringStatFlex: { flex: 1 },
   // Results card (Wordle-style)
 
   achievementCardLocked: { opacity: 0.5 },
