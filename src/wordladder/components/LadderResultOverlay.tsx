@@ -59,7 +59,7 @@ function diffIndex(a: string, b: string): number {
 }
 
 function formatVsPar(stepsOverPar: number | null): string {
-  if (stepsOverPar == null) return '—';
+  if (stepsOverPar == null) return '-';
   return stepsOverPar === 0 ? 'E' : `+${stepsOverPar}`;
 }
 

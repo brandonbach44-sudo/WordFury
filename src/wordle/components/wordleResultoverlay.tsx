@@ -175,12 +175,12 @@ const WordleResultOverlay = ({
   const hero = currentStreak != null && isWin ? { label: "Streak", value: `${currentStreak}` } : undefined;
 
   const pills: PillTriple = [
-    { label: "Guesses", value: hasThisGameData ? (isWin ? `${guessesCount}/6` : "X/6") : "—" },
-    { label: "Time", value: timeText ?? "—" },
+    { label: "Guesses", value: hasThisGameData ? (isWin ? `${guessesCount}/6` : "X/6") : "-" },
+    { label: "Time", value: timeText ?? "-" },
     !isDaily
       ? { label: "Record", value: `${sessionRecord.wins}-${sessionRecord.losses}` }
       : isWin
-        ? { label: "Best", value: bestGuessCount != null ? `${bestGuessCount}` : "—" }
+        ? { label: "Best", value: bestGuessCount != null ? `${bestGuessCount}` : "-" }
         : { label: "Streak", value: `${currentStreak ?? 0}` },
   ];
 
@@ -207,9 +207,9 @@ const WordleResultOverlay = ({
   const lifetime: LifetimeSpec | undefined = winPercentage != null || currentStreak != null || bestGuessCount != null
     ? {
         pills: [
-          { label: "Win Rate", value: winPercentage != null ? `${winPercentage}%` : "—" },
+          { label: "Win Rate", value: winPercentage != null ? `${winPercentage}%` : "-" },
           { label: "Streak", value: `${currentStreak ?? 0}` },
-          { label: "Best Solve", value: bestGuessCount != null ? `${bestGuessCount}` : "—" },
+          { label: "Best Solve", value: bestGuessCount != null ? `${bestGuessCount}` : "-" },
         ],
       }
     : undefined;
