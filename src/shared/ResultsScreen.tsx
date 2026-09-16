@@ -880,7 +880,10 @@ const v2Styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonText: { fontSize: 14, fontWeight: '800' },
-  shareButton: { backgroundColor: '#22c55e', borderColor: '#22c55e', padding: 12 },
+  // Standalone child of the footer COLUMN, not the buttons ROW, so it must
+  // not inherit button's flex: 1. In a column that sets flexBasis 0 on the
+  // button's height, collapsing it to its padding with a clipped label.
+  shareButton: { flex: 0, alignSelf: 'stretch', backgroundColor: '#22c55e', borderColor: '#22c55e', padding: 12 },
   shareRow: { marginTop: 10 },
   shareButtonText: { color: '#ffffff' },
 });
