@@ -868,6 +868,7 @@ export default function HangmanScreen() {
             category={category}
             incorrectGuesses={incorrectGuesses.length}
             totalGuesses={stats.totalGuesses}
+            currentStreak={playerStats?.currentStreak ?? 0}
             onPlayAgain={handlePlayAgain}
             onBackToMenu={handleBackToModeSelect}
             onClose={() => setResultCardClosed(true)}

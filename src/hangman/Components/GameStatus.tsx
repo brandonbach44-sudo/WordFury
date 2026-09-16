@@ -1,9 +1,10 @@
 import React from 'react';
 import { Share } from 'react-native';
 import { useTheme } from '../../shared/ThemeContext';
-import { ResultsScreen } from '../../shared/ResultsScreen';
+import { ResultsScreen, type PillTriple } from '../../shared/ResultsScreen';
 import { AchievementPopup, AchievementLike } from '../../shared/AchievementPopup';
 import { buildHangmanShareText } from '../utils/dailyChallenge';
+import { HangmanSignature } from './HangmanSignature';
 
 type GameStatusProps = {
   isVisible: boolean;
@@ -13,6 +14,9 @@ type GameStatusProps = {
   incorrectGuesses: number;
   totalGuesses: number;
   maxAttempts?: number;
+  // Win streak across every mode (see HangmanStats.currentStreak) -- this is
+  // not a daily-only figure, unlike most other games' streaks.
+  currentStreak: number;
   onPlayAgain: () => void;
   onBackToMenu: () => void;
   onClose: () => void;
@@ -29,6 +33,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   incorrectGuesses,
   totalGuesses,
   maxAttempts = 6,
+  currentStreak,
   onPlayAgain,
   onBackToMenu,
   onClose,
@@ -43,7 +48,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
 
   const handleShare = async () => {
     try {
-      // Practice categories are randomly picked each game, not a shared
+      // Quick Play categories are randomly picked each game, not a shared
       // daily puzzle, so revealing the word here is safe (unlike Daily).
       const text = buildHangmanShareText({
         isDaily: false,
@@ -64,6 +69,14 @@ export const GameStatus: React.FC<GameStatusProps> = ({
     ? `You guessed it with ${incorrectGuesses}/${maxAttempts} wrong guesses.`
     : `The word was revealed below.`;
 
+  const pills: PillTriple = [
+    { label: 'Misses', value: `${incorrectGuesses}/${maxAttempts}` },
+    { label: 'Lives', value: `${maxAttempts - incorrectGuesses}` },
+    // No daily streak to show here, so the third pill is this round's
+    // letters guessed instead of the "Best" streak Daily shows.
+    { label: 'Letters', value: `${totalGuesses}` },
+  ];
+
   // Same Modal setup as every other game's result overlay (transparent=false,
   // statusBarTranslucent, presentationStyle="overFullScreen") with manual
   // safe-area padding via useSafeAreaInsets() instead of SafeAreaView —
@@ -78,25 +91,10 @@ export const GameStatus: React.FC<GameStatusProps> = ({
         onClose={onClose}
         title={title}
         subtitle={subtitle}
-        badge={category}
-        cells={[
-          { label: 'MISSES', value: `${incorrectGuesses}/${maxAttempts}` },
-          { label: 'LIVES LEFT', value: `${maxAttempts - incorrectGuesses}` },
-          { label: 'WORD', value: word.toUpperCase(), headline: true },
-        ]}
-        groups={[
-          {
-            caption: 'THIS GAME',
-            rows: [
-              { label: 'Result', value: isWon ? 'Solved' : 'Lost',
-                tone: (isWon ? 'good' : 'warn') as 'good' | 'warn' },
-              { label: 'The word was', value: word.toUpperCase() },
-              { label: 'Category', value: category },
-              { label: 'Wrong guesses', value: `${incorrectGuesses} of ${maxAttempts}` },
-              { label: 'Total guesses', value: `${totalGuesses}` },
-            ],
-          },
-        ]}
+        badge={['Quick Play', category]}
+        hero={{ label: 'Streak', value: `${currentStreak}` }}
+        pills={pills}
+        signature={<HangmanSignature word={word} solved={isWon} incorrectGuesses={incorrectGuesses} maxAttempts={maxAttempts} />}
         onMainMenu={onBackToMenu}
         onPlayAgain={onPlayAgain}
         onShare={handleShare}
