@@ -25,11 +25,12 @@ import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyRem
 import HexGrid, { type Feedback } from '../components/HexGrid';
 import WordList from '../components/WordList';
 import RankProgressBar from '../components/RankProgressBar';
-import { ResultsScreen } from '../../shared/ResultsScreen';
+import { ResultsScreen, Card, type PillTriple, type LifetimeSpec } from '../../shared/ResultsScreen';
+import Svg, { Polygon } from 'react-native-svg';
 import type { HexHivePuzzle } from '../data/puzzles';
 import { getPuzzleSolution, shuffleLetters, getTodayDateString, formatDisplayDate } from '../utils/generator';
 import { checkGuess } from '../utils/validator';
-import { getRankProgress, scoreWordForPuzzle, getEffectiveMaxScore, RANKS } from '../utils/scoring';
+import { getRankProgress, scoreWordForPuzzle, getEffectiveMaxScore, RANKS, type RankProgress } from '../utils/scoring';
 import {
   bumpStreakForToday,
   bumpFullClearStreakForToday,
@@ -50,6 +51,17 @@ import {
 
 const ACCENT = '#D4A017'; // Hex Hive's own accent — warm honey gold, distinct from other games
 const QUICK_PLAY_SECONDS = 60;
+
+// Same hexagon vertex math as HexGrid's own tiles, at pip scale, so the
+// results screen's rank ladder echoes the puzzle's own honeycomb.
+function hexPipPoints(size: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 180) * (60 * i);
+    pts.push(`${size + size * Math.cos(angle)},${size + size * Math.sin(angle)}`);
+  }
+  return pts.join(' ');
+}
 
 function formatTime(seconds: number) {
   const mins = Math.floor(seconds / 60);
@@ -414,7 +426,42 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
   const BORDER = background.borderColor;
 
   const pangramsFound = foundWords.filter((w) => solution.pangrams.includes(w)).length;
+  const longestWord = foundWords.reduce((longest, w) => (w.length > longest.length ? w : longest), '');
   const showViewResultsPill = mode === 'practice' && gameOver && !resultsVisible;
+
+  // Six hexes, echoing the puzzle's own honeycomb, filled toward the next
+  // rank rather than the whole 10-rank ladder -- "how close to levelling up"
+  // reads better than "how far along a ladder only the game code sees."
+  const renderRankLadder = (rp: RankProgress, currentScore: number) => {
+    const HEX = 10;
+    const filled = rp.isMaxRank || rp.nextThreshold == null
+      ? 6
+      : Math.max(
+          0,
+          Math.min(6, Math.round(((currentScore - rp.currentThreshold) / (rp.nextThreshold - rp.currentThreshold)) * 6))
+        );
+    return (
+      <Card padding={16} style={styles.rankCard}>
+        <View style={styles.rankPipRow}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Svg key={i} width={HEX * 2} height={HEX * 2}>
+              <Polygon
+                points={hexPipPoints(HEX)}
+                fill={i < filled ? ACCENT : 'transparent'}
+                stroke={ACCENT}
+                strokeWidth={1.5}
+              />
+            </Svg>
+          ))}
+        </View>
+        <Text style={[styles.rankNote, { color: SUBTEXT }]}>
+          {rp.isMaxRank || rp.nextName == null
+            ? 'Top rank reached'
+            : `${Math.max(0, (rp.nextThreshold ?? currentScore) - currentScore)} pts to ${rp.nextName}`}
+        </Text>
+      </Card>
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: BG }]}>
@@ -524,73 +571,77 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
         />
       </ScrollView>
 
-      {mode === 'practice' && gameOver && (
-        <ResultsScreen
-          visible={resultsVisible}
-          gameName="HEX HIVE"
-          onClose={() => setResultsVisible(false)}
-          title="Time's Up!"
-          subtitle={`${foundWords.length} word${foundWords.length !== 1 ? 's' : ''} \u00b7 ${score} points`}
-          badge={rank.name}
-          cells={[
-            { label: 'WORDS', value: `${foundWords.length}` },
-            { label: 'PANGRAMS', value: `${pangramsFound}` },
-            { label: 'SCORE', value: `${score}`, headline: true },
-          ]}
-          groups={[
-            {
-              caption: 'THIS ROUND',
-              rows: [
-                { label: 'Rank reached', value: rank.name, tone: 'good' as const },
-                { label: 'Words found', value: `${foundWords.length}` },
-                { label: 'Pangrams', value: `${pangramsFound}` },
+      {mode === 'practice' && gameOver && (() => {
+        const pills: PillTriple = [
+          { label: 'Words', value: `${foundWords.length}` },
+          { label: 'Pangrams', value: `${pangramsFound}` },
+          { label: 'Longest', value: longestWord ? longestWord.toUpperCase() : '\u2014' },
+        ];
+        const lifetime: LifetimeSpec | undefined = finalStats
+          ? {
+              pills: [
+                { label: 'Best Score', value: `${finalStats.practiceBestScore}` },
+                { label: 'Rounds', value: `${finalStats.practicePuzzlesPlayed}` },
+                { label: 'Best Words', value: `${finalStats.practiceBestWordCount}` },
               ],
-            },
-            ...(finalStats
-              ? [{
-                  caption: 'ALL TIME',
-                  rows: [
-                    { label: 'Best score', value: `${finalStats.practiceBestScore}` },
-                    { label: 'Rounds played', value: `${finalStats.practicePuzzlesPlayed}` },
-                  ],
-                }]
-              : []),
-          ]}
-          extra={<WordReportPrompt />}
-          onMainMenu={onGoHome}
-          onPlayAgain={onPlayAgain}
-          onShare={handleShareResult}
-          shareLabel="Share Result"
-        />
-      )}
+            }
+          : undefined;
+        return (
+          <ResultsScreen
+            visible={resultsVisible}
+            gameName="HEX HIVE"
+            onClose={() => setResultsVisible(false)}
+            title="Time's Up!"
+            subtitle={`${foundWords.length} word${foundWords.length !== 1 ? 's' : ''} \u00b7 ${score} points`}
+            badge={[rank.name]}
+            hero={{ label: 'Score', value: `${score}` }}
+            pills={pills}
+            signature={renderRankLadder(rank, score)}
+            lifetime={lifetime}
+            extra={<WordReportPrompt />}
+            onMainMenu={onGoHome}
+            onPlayAgain={onPlayAgain}
+            onShare={handleShareResult}
+            shareLabel="Share Result"
+          />
+        );
+      })()}
 
-      <ResultsScreen
-        visible={mode === 'daily' && showWinCelebration}
-        gameName="HEX HIVE"
-        onClose={() => setShowWinCelebration(false)}
-        title="Solved!"
-        subtitle={`${foundWords.length} word${foundWords.length !== 1 ? 's' : ''} \u00b7 ${score} points`}
-        badge={rank.name}
-        cells={[
-          { label: 'WORDS', value: `${foundWords.length}` },
-          { label: 'PANGRAMS', value: `${pangramsFound}` },
-          { label: 'SCORE', value: `${score}`, headline: true },
-        ]}
-        groups={[
-          {
-            caption: 'TODAY',
-            rows: [
-              { label: 'Rank reached', value: rank.name, tone: 'good' as const },
-              { label: 'Words found', value: `${foundWords.length}` },
-              { label: 'Pangrams', value: `${pangramsFound}` },
-            ],
-          },
-        ]}
-        extra={<WordReportPrompt />}
-        onMainMenu={onGoHome}
-        onShare={handleShareWin}
-        shareLabel="Share Result"
-      />
+      {(() => {
+        const pills: PillTriple = [
+          { label: 'Words', value: `${foundWords.length}` },
+          { label: 'Pangrams', value: `${pangramsFound}` },
+          { label: 'Longest', value: longestWord ? longestWord.toUpperCase() : '\u2014' },
+        ];
+        const dailyStatsNow = statsRef.current;
+        const lifetime: LifetimeSpec | undefined = dailyStatsNow
+          ? {
+              pills: [
+                { label: 'Streak', value: `${dailyStatsNow.currentStreak}` },
+                { label: 'Best Streak', value: `${dailyStatsNow.bestStreak}` },
+                { label: 'Days Played', value: `${dailyStatsNow.daysPlayed}` },
+              ],
+            }
+          : undefined;
+        return (
+          <ResultsScreen
+            visible={mode === 'daily' && showWinCelebration}
+            gameName="HEX HIVE"
+            onClose={() => setShowWinCelebration(false)}
+            title="Solved!"
+            subtitle={`${foundWords.length} word${foundWords.length !== 1 ? 's' : ''} \u00b7 ${score} points`}
+            badge={[rank.name]}
+            hero={{ label: 'Score', value: `${score}` }}
+            pills={pills}
+            signature={renderRankLadder(rank, score)}
+            lifetime={lifetime}
+            extra={<WordReportPrompt />}
+            onMainMenu={onGoHome}
+            onShare={handleShareWin}
+            shareLabel="Share Result"
+          />
+        );
+      })()}
     </SafeAreaView>
   );
 }
@@ -610,6 +661,10 @@ const styles = StyleSheet.create({
   titleWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   title: { fontSize: 18, fontWeight: 'bold' },
   rankBarWrap: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10 },
+  // Results screen -- six-hex rank ladder signature card
+  rankCard: { marginTop: 16, alignItems: 'center' },
+  rankPipRow: { flexDirection: 'row', gap: 6 },
+  rankNote: { fontSize: 13, fontWeight: '700', marginTop: 10 },
   boardCard: {
     marginHorizontal: 16,
     paddingVertical: 12,
