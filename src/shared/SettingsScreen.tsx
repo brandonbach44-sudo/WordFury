@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { useTheme } from './ThemeContext';
+import { FallingLetters } from './FallingLetters';
 import { HapticManager } from './HapticManager';
 import { MotionPreference } from './motionPreference';
 import { BackgroundOption, COLORS, getLightBackgrounds } from './theme';
@@ -247,7 +248,8 @@ export const SettingsScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: background.backgroundColor }]}>
       <StatusBar barStyle={background.statusBar === 'light' ? 'light-content' : 'dark-content'} />
-      
+      <FallingLetters />
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
