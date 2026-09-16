@@ -707,19 +707,23 @@ export default function WordBuilder() {
     setTimeLeft(mode === 'blitz' ? 30 : 60);
   };
 
-  const handleRefresh = useCallback(() => {
+  const handleShuffle = useCallback(() => {
     if (gameMode === 'daily') return;
-    setLetters(generateLetters(letterCount));
+    // Reorders the letters already on screen. Score, found words, the timer
+    // and game-over state all survive a shuffle -- only the selection and
+    // current word are cleared, since their indices no longer point at the
+    // same letters once the order changes.
+    setLetters((prev) => {
+      const next = [...prev];
+      for (let i = next.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [next[i], next[j]] = [next[j], next[i]];
+      }
+      return next;
+    });
     setSelectedIndices([]);
     setCurrentWord('');
-    setScore(0);
-    setFoundWords([]);
-    setMessage('Tap letters to build words!');
-    setGameOver(false);
-    setShowWordList(false);
-    setPossibleWords([]);
-    setTimeLeft(gameMode === 'blitz' ? 30 : 60);
-  }, [letterCount, gameMode]);
+  }, [gameMode]);
 
   const handleLetterPress = useCallback((index: number) => {
     if (gameOver) return;
@@ -1140,7 +1144,7 @@ export default function WordBuilder() {
         {!isDaily && (
           <TouchableOpacity
             style={[styles.refreshButton, dynamicStyles.button]}
-            onPress={handleRefresh}
+            onPress={handleShuffle}
           >
             <RotateCw size={16} color={dynamicStyles.textSecondary.color} />
             <Text style={[styles.refreshButtonText, dynamicStyles.textSecondary]}>Shuffle</Text>
