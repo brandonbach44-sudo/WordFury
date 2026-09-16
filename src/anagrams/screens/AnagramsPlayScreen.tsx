@@ -35,6 +35,7 @@ import type { AnagramPuzzle } from '../utils/generator';
 import { getHintLetter, isValidAnagramGuess } from '../utils/generator';
 import type { AnagramsCategoryId } from '../data/categories';
 import { calculateRoundScore, calculateTotalScore, RoundResult } from '../utils/scoring';
+import { incrementAnagramsPracticeRoundsThisSession } from '../utils/sessionStats';
 import {
   addDailyScoreToEquippedTier,
   clearDailyProgress,
@@ -116,6 +117,14 @@ const AnagramsPlayScreen: React.FC<Props> = ({
   const [runTotalScore, setRunTotalScore] = useState(lockedResult?.totalScore ?? 0);
   const [runPerfectBonus, setRunPerfectBonus] = useState(lockedResult?.perfectBonusApplied ?? false);
   const [runElapsed, setRunElapsed] = useState(lockedResult?.timeSeconds ?? 0);
+  const [roundsThisSession, setRoundsThisSession] = useState(0);
+  const [finalModeStats, setFinalModeStats] = useState<{
+    bestScore: number;
+    gamesPlayed: number;
+    currentStreak: number;
+    bestStreak: number;
+    perfectRuns: number;
+  } | null>(null);
 
   const currentRound = puzzle.rounds[roundIndex];
 
@@ -430,8 +439,16 @@ const AnagramsPlayScreen: React.FC<Props> = ({
     } else {
       // Practice run finished — clear saved progress so next run starts fresh.
       await clearPracticeProgress();
+      setRoundsThisSession(incrementAnagramsPracticeRoundsThisSession());
     }
 
+    setFinalModeStats({
+      bestScore: modeStats.bestScore ?? total,
+      gamesPlayed: modeStats.gamesPlayed,
+      currentStreak: modeStats.currentStreak,
+      bestStreak: modeStats.bestStreak,
+      perfectRuns: modeStats.perfectRuns,
+    });
     await saveAnagramsStats(stats);
 
     const fastestRoundSeconds = finalResults.filter((r) => r.solved && !r.skipped).reduce<number | null>(
@@ -854,8 +871,8 @@ const AnagramsPlayScreen: React.FC<Props> = ({
         totalScore={runTotalScore}
         perfectBonusApplied={runPerfectBonus}
         timeSeconds={runElapsed}
-        currentStreak={finalStreaks.current}
-        bestStreak={finalStreaks.best}
+        roundsThisSession={roundsThisSession}
+        lifetimeStats={finalModeStats}
         nextDailySecondsRemaining={isDaily ? parseCountdownSeconds(countdown) : null}
         shareText={shareText}
         onClose={() => {
