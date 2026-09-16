@@ -3000,6 +3000,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 4,
     paddingBottom: 6,
+    // Raises the keyboard and ENTER button together off the bottom edge --
+    // gameTopArea's flex:1 leftover space sits just above this block, so
+    // this margin comes out of that gap rather than compressing the puzzle
+    // grid above it.
+    marginBottom: 14,
     flexShrink: 0,
   },
 
