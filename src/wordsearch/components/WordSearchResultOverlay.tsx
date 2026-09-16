@@ -170,8 +170,18 @@ const WordSearchResultOverlay: React.FC<Props> = ({
         { label: 'Rounds', value: `${roundsThisSession}` },
       ];
 
+  // At most one chip is highlighted: the longest word actually found. Every
+  // found word used to light up, which made the highlight meaningless.
+  const longestFound = puzzleWords
+    ? puzzleWords.reduce<string | null>((best, w) => {
+        if (!foundSet.has(w.word)) return best;
+        if (!best || w.word.length > best.length) return w.word;
+        return best;
+      }, null)
+    : null;
+
   const chips: ChipSpec[] | undefined = puzzleWords
-    ? puzzleWords.map((w) => ({ label: w.word, highlighted: foundSet.has(w.word) }))
+    ? puzzleWords.map((w) => ({ label: w.word, highlighted: foundSet.has(w.word) && w.word === longestFound }))
     : undefined;
 
   // Progress bar instead of listing which words were found — the Daily
