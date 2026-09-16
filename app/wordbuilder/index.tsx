@@ -1063,6 +1063,7 @@ export default function WordBuilder() {
           </>
         }
         onMainMenu={backToMenu}
+        onPlayAgain={!isDaily ? () => startPracticeGame(gameMode as 'blitz' | 'standard', letterCount) : undefined}
         onShare={() => shareResult({
           isDaily,
           totalFound: stats.totalFound,
