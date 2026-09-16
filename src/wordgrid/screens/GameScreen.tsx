@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '../../shared/ThemeContext';
-import { ResultsScreen } from '../../shared/ResultsScreen';
+import { ResultsScreen, Card, WordTiles, type PillTriple, type LifetimeSpec } from '../../shared/ResultsScreen';
 import { COLORS } from '../../shared/theme';
 import { maybeRequestReview } from '../../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyReminders';
@@ -55,6 +55,7 @@ import { calculateWordScore, LONGEST_WORD_BONUS } from '../utils/scoring';
 import {
   loadWordGridStats,
   updateStatsAfterGame,
+  recordQuickPlayScore,
   type WordGridStats,
 } from '../utils/storage';
 import {
@@ -118,7 +119,6 @@ export default function GameScreen() {
   // ── Screen / tab state ────────────────────────────────────────────────────
   const [screen, setScreen] = useState<Screen>('menu');
   const [menuTab, setMenuTab] = useState<MenuTab>('play');
-  const [showWordList, setShowWordList] = useState(false);
 
   // Tab swipe animation (2 tabs: play, stats)
   const TABS: MenuTab[] = ['play', 'stats'];
@@ -216,6 +216,9 @@ export default function GameScreen() {
   // ── Game mode & daily ─────────────────────────────────────────────────────
   const [gameMode, setGameMode] = useState<GameMode>('quick');
   const [dailyShareText, setDailyShareText] = useState('');
+  // Quick Play's results screen shows this run's rank among today's runs
+  // instead of a lifetime figure it would otherwise repeat.
+  const [quickPlayRank, setQuickPlayRank] = useState<number | null>(null);
 
   const dailyPlayedToday = dailyStats?.lastPlayedDate === getTodayDateString();
 
@@ -447,7 +450,7 @@ export default function GameScreen() {
         setScreen('results');
       } else {
         await clearWordGridQuickPlayProgress();
-        setShowWordList(false);
+        setQuickPlayRank(await recordQuickPlayScore(finalScore));
         setScreen('results');
       }
     })();
@@ -522,7 +525,6 @@ export default function GameScreen() {
     setTimeLeft(ROUND_DURATION);
     setGameOver(false);
     setFeedbacks([]);
-    setShowWordList(false);
     setScreen('game');
     setTimeout(startTimer, 100);
   }, [startTimer]);
@@ -530,7 +532,6 @@ export default function GameScreen() {
   const handleBackToMenu = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     setGameOver(false);
-    setShowWordList(false);
     setScreen('menu');
     switchToTab('play');
   }, [switchToTab]);
@@ -633,92 +634,81 @@ export default function GameScreen() {
     const isDaily = gameMode === 'daily';
     const sortedWords = [...foundWords].sort((a, b) => b.points - a.points);
 
-    // The found-word list used to live on a second swipe page of its own, which
-    // is exactly the kind of per-game divergence the shared screen exists to
-    // remove. It is a toggle here instead, collapsed by default, the same way
-    // Word Search hides its answer key, so a 30-word round cannot push the
-    // buttons off screen.
-    const wordList = foundWords.length > 0 ? (
-      <View style={{ marginTop: 22 }}>
-        <Pressable
-          onPress={() => setShowWordList((v) => !v)}
-          style={({ pressed }) => [
-            styles.wordListToggle,
-            { borderColor: bg.borderColor, backgroundColor: bg.cardColor, opacity: pressed ? 0.75 : 1 },
-          ]}
-        >
-          <Text style={[styles.wordListToggleText, { color: bg.textColor }]}>
-            {showWordList ? 'Hide words' : `Show all ${foundWords.length} words`}
-          </Text>
-        </Pressable>
-        {showWordList && (
-          <View style={{ marginTop: 10 }}>
-            {sortedWords.map((item) => (
-              <View key={item.word} style={styles.wordListRow}>
-                <Text style={[styles.wordListWord, { color: bg.textColor }]}>{item.word}</Text>
-                <Text style={[styles.wordListPoints, { color: bg.secondaryText }]}>{item.points} pts</Text>
-              </View>
-            ))}
+    const wordListContent = foundWords.length > 0 ? (
+      <View>
+        {sortedWords.map((item) => (
+          <View key={item.word} style={styles.wordListRow}>
+            <Text style={[styles.wordListWord, { color: bg.textColor }]}>{item.word}</Text>
+            <Text style={[styles.wordListPoints, { color: bg.secondaryText }]}>{item.points} pts</Text>
           </View>
-        )}
+        ))}
       </View>
     ) : null;
 
-    return (
-      <ResultsScreen
-        visible
-        gameName="WORD GRID"
-        onClose={handleBackToMenu}
-        title="Time's Up!"
-        subtitle={`${foundWords.length} word${foundWords.length !== 1 ? 's' : ''} \u00b7 ${score} points`}
-        cells={[
-          { label: 'WORDS', value: `${foundWords.length}` },
-          { label: 'BEST', value: topWordEntry ? topWordEntry.word.toUpperCase() : '\u2014' },
-          { label: 'SCORE', value: score.toLocaleString(), headline: true },
-        ]}
-        groups={[
-          {
-            caption: 'THIS GAME',
-            rows: [
-              { label: 'Words found', value: `${foundWords.length}` },
-              {
-                label: 'Best word',
-                value: topWordEntry ? `${topWordEntry.word.toUpperCase()} (${topWordEntry.points})` : '\u2014',
-                tone: 'good' as const,
-              },
-              { label: 'Longest word', value: bestLen > 0 ? `${bestLen} letters` : '\u2014' },
-            ],
-          },
-          ...(stats
-            ? [{
-                caption: 'ALL TIME',
-                rows: [
-                  ...(isDaily && dailyStats
-                    ? [
-                        { label: 'Daily streak', value: `${dailyStats.streak ?? 0}` },
-                        { label: 'Best streak', value: `${dailyStats.bestStreak ?? 0}` },
-                      ]
-                    : []),
-                  { label: 'High score', value: stats.highScore.toLocaleString() },
-                  { label: 'Games played', value: `${stats.gamesPlayed}` },
-                  { label: 'Total words', value: stats.totalWordsFound.toLocaleString() },
-                  { label: 'Best in one game', value: `${stats.bestWordsInGame}` },
-                ],
-              }]
-            : []),
-        ]}
-        extra={
-          <>
-            {wordList}
-            <WordReportPrompt />
-          </>
+    const pills: PillTriple = isDaily
+      ? [
+          { label: 'Words', value: `${foundWords.length}` },
+          { label: 'Best', value: topWordEntry ? `${topWordEntry.points}` : '0' },
+          { label: 'Longest', value: bestLen > 0 ? `${bestLen}` : '0' },
+        ]
+      : [
+          { label: 'Words', value: `${foundWords.length}` },
+          { label: 'Best', value: topWordEntry ? `${topWordEntry.points}` : '0' },
+          // Quick Play's third pill: this run's rank among today's runs,
+          // not a lifetime figure the ghost row below would just repeat.
+          { label: 'Rank', value: `#${quickPlayRank ?? 1}` },
+        ];
+
+    const signature = topWordEntry ? (
+      <Card padding={16} style={styles.bestWordCard}>
+        <Text style={[styles.bestWordLabel, { color: bg.secondaryText }]}>BEST WORD</Text>
+        <WordTiles word={topWordEntry.word.toUpperCase()} solved />
+        <Text style={[styles.bestWordPoints, { color: bg.textColor }]}>{topWordEntry.points} pts</Text>
+      </Card>
+    ) : undefined;
+
+    // High score can't be recomputed from this round alone, so it stays.
+    // Total words and best-in-a-game are already on the stats page; the
+    // streak takes their place on Daily, where it carries weight right
+    // after finishing, the same reasoning Furdle's trim uses.
+    const lifetime: LifetimeSpec | undefined = stats
+      ? {
+          pills: isDaily
+            ? [
+                { label: 'Streak', value: `${dailyStats?.streak ?? 0}` },
+                { label: 'High Score', value: stats.highScore.toLocaleString() },
+                { label: 'Games', value: `${stats.gamesPlayed}` },
+              ]
+            : [
+                { label: 'High Score', value: stats.highScore.toLocaleString() },
+                { label: 'Games', value: `${stats.gamesPlayed}` },
+                { label: 'Total Words', value: stats.totalWordsFound.toLocaleString() },
+              ],
         }
-        countdown={isDaily ? { label: 'NEXT DAILY IN', value: dailyCountdown } : null}
-        onMainMenu={handleBackToMenu}
-        onPlayAgain={isDaily ? undefined : handlePlayAgain}
-        onShare={handleShareResult}
-        shareLabel="Share Result"
-      />
+      : undefined;
+
+    const commonProps = {
+      visible: true as const,
+      gameName: 'WORD GRID',
+      onClose: handleBackToMenu,
+      title: "Time's Up!",
+      subtitle: `${foundWords.length} word${foundWords.length !== 1 ? 's' : ''} \u00b7 ${score} points`,
+      badge: !isDaily ? ['Quick Play'] : undefined,
+      hero: { label: 'Score', value: score.toLocaleString() },
+      pills,
+      signature,
+      toggle: wordListContent ? { label: 'Words Found', content: wordListContent } : undefined,
+      lifetime,
+      extra: <WordReportPrompt />,
+      onMainMenu: handleBackToMenu,
+      onShare: handleShareResult,
+      shareLabel: 'Share Result',
+    };
+
+    return isDaily ? (
+      <ResultsScreen {...commonProps} countdown={{ label: 'Next daily in', value: dailyCountdown }} />
+    ) : (
+      <ResultsScreen {...commonProps} onPlayAgain={handlePlayAgain} />
     );
   }
 
@@ -1288,13 +1278,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Results screen ──
-  wordListToggle: {
-    borderWidth: 2,
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  wordListToggleText: { fontSize: 14, fontWeight: '800' },
   wordListRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1303,6 +1286,9 @@ const styles = StyleSheet.create({
   },
   wordListWord: { fontSize: 14, fontWeight: '700' },
   wordListPoints: { fontSize: 13, fontWeight: '600' },
+  bestWordCard: { marginTop: 16, alignItems: 'center' },
+  bestWordLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 2.2, textTransform: 'uppercase', marginBottom: 8 },
+  bestWordPoints: { fontSize: 14, fontWeight: '800', marginTop: 8 },
   // Results page — Wordle/Hangman card style
 
   // Words page
