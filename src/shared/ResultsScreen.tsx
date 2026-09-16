@@ -842,11 +842,11 @@ const v2Styles = StyleSheet.create({
   },
   badgeText: { fontSize: 11, fontWeight: '800', letterSpacing: 1.4, textTransform: 'uppercase' },
 
-  heroCard: { marginTop: 16 },
-  heroLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 2.2, textTransform: 'uppercase' },
-  heroValue: { fontSize: 54, fontWeight: '900', letterSpacing: -1, lineHeight: 55 },
+  heroCard: { marginTop: 16, alignItems: 'center' },
+  heroLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 2.2, textTransform: 'uppercase', textAlign: 'center' },
+  heroValue: { fontSize: 54, fontWeight: '900', letterSpacing: -1, lineHeight: 55, textAlign: 'center' },
   heroSuffix: { fontSize: 20, fontWeight: '800' },
-  heroNote: { fontSize: 12, fontWeight: '600', marginTop: 3 },
+  heroNote: { fontSize: 12, fontWeight: '600', marginTop: 3, textAlign: 'center' },
 
   pillRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   pillFlex: { flex: 1 },
