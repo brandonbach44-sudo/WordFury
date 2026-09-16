@@ -895,8 +895,15 @@ export default function WordleGame() {
 
   const closeResult = useCallback(() => {
     setShowResult(false);
+    // Opened from the menu without ever switching to the game screen (see
+    // openDailyResultFromMenu) -- reveal the completed board only now that
+    // the overlay is closing, not before, so it never flashes behind the
+    // overlay's opening slide.
+    if (overlayOrigin === "menu_view") {
+      setScreen("game");
+    }
     setOverlayOrigin("game_end");
-  }, []);
+  }, [overlayOrigin]);
 
   const goToMenu = useCallback((tab: MenuTab = "play") => {
     setMenuTab(tab);
@@ -1059,10 +1066,12 @@ export default function WordleGame() {
   const openDailyResultFromMenu = useCallback(() => {
     if (!isDailyCompletedToday) return;
 
-    // Switch to the game screen underneath so closing the overlay lands the
-    // player on their completed board instead of bouncing back to the menu.
+    // Stay on the menu screen underneath -- switching to "game" here would
+    // mount the completed board a frame before the overlay finishes sliding
+    // up over it. closeResult() switches to "game" once the overlay closes,
+    // so the player still lands on their completed board rather than
+    // bouncing back to the menu.
     setGameMode("daily");
-    setScreen("game");
 
     setOverlayOrigin("menu_view");
     setOverlayMode("daily");
