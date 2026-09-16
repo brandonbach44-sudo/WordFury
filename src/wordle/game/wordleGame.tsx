@@ -585,6 +585,9 @@ export default function WordleGame() {
   const [overlayEvaluationRows, setOverlayEvaluationRows] = useState<LetterState[][]>([]);
 
   const [stats, setStats] = useState<WordleStats>(() => createDefaultStats());
+  // Quick Play's results screen shows this instead of a daily streak, which
+  // doesn't apply outside the Daily. Session-only, never persisted.
+  const [sessionRecord, setSessionRecord] = useState({ wins: 0, losses: 0 });
   const [hydrated, setHydrated] = useState(false);
   const [prefs, setPrefs] = useState<WordlePrefs>({ hardMode: false, colorBlindMode: false, keyShape: 'square', keyStyle: 'filled', keySkin: 'default', keyDefaultVariant: 1 });
 
@@ -1144,6 +1147,12 @@ export default function WordleGame() {
       setStatus(result);
 
       if (result === "won") triggerWinBounce();
+
+      if (gameMode === "practice") {
+        setSessionRecord((prev) =>
+          result === "won" ? { ...prev, wins: prev.wins + 1 } : { ...prev, losses: prev.losses + 1 }
+        );
+      }
 
       // Update overlay payload first (so it can be opened later even if we jump back to menu)
       setOverlayOrigin("game_end");
@@ -2338,13 +2347,10 @@ export default function WordleGame() {
           guessesCount={overlayGuessesCount}
           timeSeconds={overlayTimeSeconds}
           currentStreak={overlayMode === "daily" ? stats.daily.currentStreak : null}
-          bestStreak={overlayMode === "daily" ? stats.daily.bestStreak : null}
           winPercentage={overlayMode === "daily" ? winRateDaily : winRatePractice}
-          gamesPlayed={overlayMode === "daily" ? stats.daily.gamesPlayed : stats.practice.gamesPlayed}
           bestGuessCount={overlayMode === "daily" ? stats.daily.bestGuessCount : stats.practice.bestGuessCount}
           guessDistribution={overlayMode === "daily" ? stats.daily.guessDistribution : stats.practice.guessDistribution}
-          averageTimeSeconds={overlayMode === "daily" ? (avgTimeDaily ?? null) : (avgTimePractice ?? null)}
-          averageGuesses={overlayMode === "daily" ? (avgGuessesDaily ?? null) : (avgGuessesPractice ?? null)}
+          sessionRecord={sessionRecord}
           onClose={() => {
             // Closing just dismisses the overlay so the player can look at
             // their completed puzzle instead of being bounced to the menu.

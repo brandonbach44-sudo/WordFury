@@ -1,9 +1,9 @@
-import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React from "react";
+import { Share, StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "../../shared/ThemeContext";
 import { AchievementPopup, AchievementLike } from "../../shared/AchievementPopup";
-import { ResultsScreen } from "../../shared/ResultsScreen";
+import { ResultsScreen, Card, WordTiles, Caption, type PillTriple, type LifetimeSpec } from "../../shared/ResultsScreen";
 import { WordReportPrompt } from "../../shared/WordReportPrompt";
 
 type CellState = "correct" | "present" | "absent" | "empty";
@@ -16,13 +16,12 @@ type Props = {
   guessesCount: number;
   timeSeconds: number | null;
   currentStreak: number | null;
-  bestStreak: number | null;
   winPercentage: number | null;
-  gamesPlayed: number | null;
   bestGuessCount: number | null;
   guessDistribution: Record<number, number> | null;
-  averageTimeSeconds: number | null;
-  averageGuesses: number | null;
+  // Quick Play's results screen shows this instead of a daily streak, which
+  // doesn't apply outside the Daily.
+  sessionRecord: { wins: number; losses: number };
   onClose: () => void;
   onPlayAgain: () => void;
   onGoHome: () => void;
@@ -104,13 +103,10 @@ const WordleResultOverlay = ({
   guessesCount,
   timeSeconds,
   currentStreak,
-  bestStreak,
   winPercentage,
-  gamesPlayed,
   bestGuessCount,
   guessDistribution,
-  averageTimeSeconds,
-  averageGuesses,
+  sessionRecord,
   onClose,
   onPlayAgain,
   onGoHome,
@@ -123,12 +119,15 @@ const WordleResultOverlay = ({
 }: Props) => {
   const { background } = useTheme();
 
+  const isDaily = mode === "daily";
+  const isWin = status === "won";
+  const hasThisGameData = guessesCount > 0 || timeSeconds != null;
+
   const handleShare = async () => {
     try {
       const text = shareText && shareText.length > 0
         ? shareText
         : `Furdle ${isWin ? `${guessesCount}/6` : "X/6"}`;
-      const { Share } = require("react-native");
       await Share.share({ message: text });
     } catch (e) {
       console.warn("Share failed", e);
@@ -136,13 +135,7 @@ const WordleResultOverlay = ({
   };
   const TEXT = background.textColor ?? "#111827";
   const SUBTEXT = background.secondaryText ?? "#6b7280";
-  const BORDER = background.borderColor ?? "#e5e7eb";
   const CARD = background.cardColor ?? "#ffffff";
-
-  const [showDistribution, setShowDistribution] = useState(false);
-  const isDaily = mode === "daily";
-  const isWin = status === "won";
-  const hasThisGameData = guessesCount > 0 || timeSeconds != null;
 
   let title = isWin ? "Nice!" : "Out of guesses";
   let subtitle: string;
@@ -174,8 +167,90 @@ const WordleResultOverlay = ({
   const timeText =
     timeSeconds != null ? formatSeconds(timeSeconds) : undefined;
 
-  const avgTimeText =
-    averageTimeSeconds != null ? formatSeconds(averageTimeSeconds) : undefined;
+  const badge = isDaily ? undefined : ["Quick Play"];
+
+  // No hero number for a loss (see below) or for Quick Play, where the
+  // streak this tracks is a Daily-only concept -- currentStreak is null
+  // whenever this isn't a Daily win, same guard the legacy cells used.
+  const hero = currentStreak != null && isWin ? { label: "Streak", value: `${currentStreak}` } : undefined;
+
+  const pills: PillTriple = [
+    { label: "Guesses", value: hasThisGameData ? (isWin ? `${guessesCount}/6` : "X/6") : "—" },
+    { label: "Time", value: timeText ?? "—" },
+    !isDaily
+      ? { label: "Record", value: `${sessionRecord.wins}-${sessionRecord.losses}` }
+      : isWin
+        ? { label: "Best", value: bestGuessCount != null ? `${bestGuessCount}` : "—" }
+        : { label: "Streak", value: `${currentStreak ?? 0}` },
+  ];
+
+  // The solved word gets its own tile card rather than the badge, which no
+  // longer carries it (see docs/RESULTS_SCREEN_V2.md). A loss shows the same
+  // tiles outlined instead of filled, plus how close the best guess came.
+  const bestGuessCorrect = !isWin && evaluationRows && evaluationRows.length > 0
+    ? Math.max(...evaluationRows.map((row) => row.filter((c) => c === "correct").length))
+    : 0;
+  const signature = solutionWord ? (
+    <Card padding={16} style={styles.signatureCard}>
+      <WordTiles word={solutionWord.toUpperCase()} solved={isWin} />
+      {!isWin && evaluationRows && evaluationRows.length > 0 && (
+        <Text style={[styles.nearMissText, { color: SUBTEXT }]}>
+          Your closest guess had {bestGuessCorrect} of {solutionWord.length} letters right.
+        </Text>
+      )}
+    </Card>
+  ) : undefined;
+
+  // Games Played and Best Streak come out here -- Win Rate is the one number
+  // not trivially recomputed elsewhere, and Current Streak is what carries
+  // weight right after finishing. The full archive stays on the stats page.
+  const lifetime: LifetimeSpec | undefined = winPercentage != null || currentStreak != null || bestGuessCount != null
+    ? {
+        pills: [
+          { label: "Win Rate", value: winPercentage != null ? `${winPercentage}%` : "—" },
+          { label: "Streak", value: `${currentStreak ?? 0}` },
+          { label: "Best Solve", value: bestGuessCount != null ? `${bestGuessCount}` : "—" },
+        ],
+      }
+    : undefined;
+
+  // The guess distribution is always visible on the Daily, never behind a
+  // toggle -- Quick Play never shows it at all (a distribution of quick-play
+  // rounds carries little meaning, and it overflowed into the buttons the
+  // one time it was tried).
+  const distribution = isDaily && guessDistribution ? (
+    <View style={styles.distSection}>
+      <Caption>Guess Distribution</Caption>
+      <GuessDistributionChart
+        distribution={guessDistribution}
+        highlightGuess={isWin ? guessesCount : null}
+        textColor={TEXT}
+        secondaryText={SUBTEXT}
+      />
+    </View>
+  ) : null;
+
+  const commonProps = {
+    visible,
+    gameName: "FURDLE",
+    onClose,
+    title,
+    subtitle,
+    badge,
+    hero,
+    pills,
+    signature,
+    lifetime,
+    extra: (
+      <>
+        {distribution}
+        <WordReportPrompt />
+      </>
+    ),
+    onMainMenu: onGoHome,
+    onShare: hasThisGameData ? handleShare : undefined,
+    shareLabel: "Share Result",
+  };
 
   // Rendered in a native Modal so this always covers the full screen,
   // regardless of the parent play screen's layout. The achievement toast is
@@ -184,94 +259,18 @@ const WordleResultOverlay = ({
   // behind this overlay (native Modals always paint above plain views).
   return (
     <>
-      <ResultsScreen
-        visible={visible}
-        gameName="FURDLE"
-        onClose={onClose}
-        title={title}
-        subtitle={subtitle}
-        badge={solutionWord ? solutionWord.toUpperCase() : undefined}
-        cells={[
-          {
-            label: 'GUESSES',
-            value: hasThisGameData ? (isWin ? `${guessesCount}/6` : 'X/6') : '\u2014',
-          },
-          { label: 'TIME', value: timeText ?? '\u2014' },
-          {
-            label: 'STREAK',
-            value: currentStreak != null ? `${currentStreak}` : '\u2014',
-            headline: true,
-          },
-        ]}
-        groups={[
-          ...(hasThisGameData
-            ? [{
-                caption: 'THIS GAME',
-                rows: [
-                  { label: 'Result', value: isWin ? 'Solved' : 'Out of guesses',
-                    tone: (isWin ? 'good' : 'warn') as 'good' | 'warn' },
-                  ...(timeText ? [{ label: 'Time', value: timeText }] : []),
-                ],
-              }]
-            : []),
-          {
-            caption: 'ALL TIME',
-            rows: [
-              ...(winPercentage != null ? [{ label: 'Win rate', value: `${winPercentage}%` }] : []),
-              ...(gamesPlayed != null ? [{ label: 'Games played', value: `${gamesPlayed}` }] : []),
-              ...(bestGuessCount != null
-                ? [{ label: 'Best solve', value: `${bestGuessCount} ${bestGuessCount === 1 ? 'guess' : 'guesses'}` }]
-                : []),
-              ...(averageGuesses != null
-                ? [{ label: 'Average guesses', value: averageGuesses.toFixed(1) }]
-                : []),
-              ...(avgTimeText ? [{ label: 'Average time', value: avgTimeText }] : []),
-              ...(bestStreak != null
-                ? [{ label: 'Best streak', value: `${bestStreak} ${bestStreak === 1 ? 'day' : 'days'}` }]
-                : []),
-            ],
-          },
-        ]}
-        countdown={
-          isDaily && nextDailySecondsRemaining != null
-            ? { label: 'NEXT DAILY IN', value: formatCountdown(nextDailySecondsRemaining) }
-            : null
-        }
-        extra={
-          <>
-            {guessDistribution ? (
-              <View style={{ marginTop: 22 }}>
-                <Pressable
-                  onPress={() => setShowDistribution((v) => !v)}
-                  style={({ pressed }) => [
-                    styles.chartToggle,
-                    { borderColor: BORDER, backgroundColor: CARD, opacity: pressed ? 0.75 : 1 },
-                  ]}
-                >
-                  <Text style={[styles.chartToggleText, { color: TEXT }]}>
-                    {showDistribution ? 'Hide guess distribution' : 'Show guess distribution'}
-                  </Text>
-                </Pressable>
-                {showDistribution && (
-                  <View style={{ marginTop: 10 }}>
-                    <GuessDistributionChart
-                      distribution={guessDistribution}
-                      highlightGuess={isWin ? guessesCount : null}
-                      textColor={TEXT}
-                      secondaryText={SUBTEXT}
-                    />
-                  </View>
-                )}
-              </View>
-            ) : null}
-            <WordReportPrompt />
-          </>
-        }
-        onMainMenu={onGoHome}
-        onPlayAgain={isDaily ? undefined : onPlayAgain}
-        onShare={hasThisGameData ? handleShare : undefined}
-        shareLabel="Share Result"
-      />
+      {isDaily ? (
+        <ResultsScreen
+          {...commonProps}
+          countdown={
+            nextDailySecondsRemaining != null
+              ? { label: "Next daily in", value: formatCountdown(nextDailySecondsRemaining) }
+              : undefined
+          }
+        />
+      ) : (
+        <ResultsScreen {...commonProps} onPlayAgain={onPlayAgain} />
+      )}
       <AchievementPopup
         achievements={achievements}
         onDismiss={onDismissAchievement ?? (() => {})}
@@ -285,15 +284,12 @@ const WordleResultOverlay = ({
 export default WordleResultOverlay;
 
 const styles = StyleSheet.create({
-  chartToggle: {
-    borderWidth: 2,
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  chartToggleText: { fontSize: 14, fontWeight: "800" },
+  signatureCard: { marginTop: 16, alignItems: "center" },
+  nearMissText: { fontSize: 13, fontWeight: "600", marginTop: 10, textAlign: "center" },
+  distSection: { alignItems: "center", width: "100%" },
   distWrap: {
-    marginTop: 2,
+    marginTop: 8,
+    width: "100%",
   },
   distRow: {
     flexDirection: "row",
