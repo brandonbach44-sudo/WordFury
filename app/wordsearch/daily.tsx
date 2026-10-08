@@ -3,7 +3,6 @@
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { COLORS } from '../../src/shared/theme';
 import { useTheme } from '../../src/shared/ThemeContext';
 import { WORD_SEARCH_THEMES } from '../../src/wordsearch/data/themes';
 import PlayScreen from '../../src/wordsearch/PlayScreen';
@@ -125,7 +124,7 @@ export default function WordSearchDailyScreen() {
           alignItems: 'center',
         }}
       >
-        <ActivityIndicator color={COLORS.accent} size="large" />
+        <ActivityIndicator color={background.accentColor} size="large" />
       </View>
     );
   }

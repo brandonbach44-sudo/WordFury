@@ -62,7 +62,7 @@ export const DailyChallengeCard: React.FC<Props> = ({
       {/* Completed score display */}
       {played && (
         <View style={styles.completedInfo}>
-          <Text style={styles.completedScore}>{score}</Text>
+          <Text style={[styles.completedScore, { color: background.accentColor }]}>{score}</Text>
           <Text style={[styles.completedLabel, { color: SUBTEXT }]}>
             {wordsCount} words found
           </Text>

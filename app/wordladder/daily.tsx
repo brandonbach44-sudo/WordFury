@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useTheme } from '../../src/shared/ThemeContext';
-import { COLORS } from '../../src/shared/theme';
 import type { LadderPuzzle } from '../../src/wordladder/utils/generator';
 import { generateDailyLadder } from '../../src/wordladder/utils/generator';
 import {
@@ -87,7 +86,7 @@ export default function WordLadderDailyScreen() {
   if (loading || !puzzle) {
     return (
       <View style={{ flex: 1, backgroundColor: background.backgroundColor, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator color={COLORS.accent} size="large" />
+        <ActivityIndicator color={background.accentColor} size="large" />
       </View>
     );
   }

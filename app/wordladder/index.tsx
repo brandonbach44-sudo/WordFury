@@ -285,7 +285,7 @@ export default function WordLadderEntryScreen() {
                     <Text style={[styles.dailyLadderWord, { color: background.textColor }]}>{dailyLock.end.toUpperCase()}</Text>
                   </View>
                   <Text
-                    style={styles.dailyCompletedScore}
+                    style={[styles.dailyCompletedScore, { color: background.accentColor }]}
                     numberOfLines={1}
                     adjustsFontSizeToFit
                     minimumFontScale={0.5}
@@ -384,7 +384,7 @@ export default function WordLadderEntryScreen() {
                 {/* Always reopenable, so the intro is a reference rather than a
                     one-time thing someone skipped and can never get back. */}
                 <Pressable onPress={() => setShowIntro(true)} hitSlop={8}>
-                  <Text style={[styles.rulesExampleLink, { color: COLORS.accent }]}>See example</Text>
+                  <Text style={[styles.rulesExampleLink, { color: background.accentColor }]}>See example</Text>
                 </Pressable>
               </View>
               {[
@@ -394,7 +394,7 @@ export default function WordLadderEntryScreen() {
                 'Stuck? Use a hint to reveal one letter of the next word',
               ].map((rule, i) => (
                 <View key={i} style={styles.ruleRow}>
-                  <Text style={[styles.ruleNum, { color: COLORS.accent }]}>{i + 1}</Text>
+                  <Text style={[styles.ruleNum, { color: background.accentColor }]}>{i + 1}</Text>
                   <Text style={[styles.ruleText, { color: background.secondaryText }]}>{rule}</Text>
                 </View>
               ))}
@@ -406,7 +406,7 @@ export default function WordLadderEntryScreen() {
           {/* ── STATS TAB ── */}
           <ScrollView style={{ width }} contentContainerStyle={styles.tabContent} showsVerticalScrollIndicator={false}>
             {loadingStats ? (
-              <ActivityIndicator color={COLORS.accent} style={{ marginTop: 20 }} />
+              <ActivityIndicator color={background.accentColor} style={{ marginTop: 20 }} />
             ) : combinedGames > 0 ? (
               <>
                 {/* ── DAILY LADDER ── */}
@@ -443,7 +443,7 @@ export default function WordLadderEntryScreen() {
                 <View style={{ paddingHorizontal: 4, marginBottom: 8 }}>
                   <DailyCalendar
                     history={dailyHistory}
-                    accentColor={COLORS.accent}
+                    accentColor={background.accentColor}
                     textColor={background.textColor}
                     secondaryTextColor={background.secondaryText}
                     cardColor={background.cardColor}
@@ -538,7 +538,7 @@ export default function WordLadderEntryScreen() {
       <GameIntro
         visible={showIntro}
         onClose={closeIntro}
-        accentColor={COLORS.accent}
+        accentColor={background.accentColor}
         cards={[
           {
             heading: 'Climb from one word to another',
@@ -546,7 +546,7 @@ export default function WordLadderEntryScreen() {
             visual: (
               <WordChain
                 words={['COLD', 'CORD', 'CORE', 'CARE']}
-                accent={COLORS.accent}
+                accent={background.accentColor}
                 textColor={background.textColor}
                 secondaryText={background.secondaryText}
               />
@@ -558,7 +558,7 @@ export default function WordLadderEntryScreen() {
             visual: (
               <WordChain
                 words={['CORD', 'CORE']}
-                accent={COLORS.accent}
+                accent={background.accentColor}
                 textColor={background.textColor}
                 secondaryText={background.secondaryText}
               />

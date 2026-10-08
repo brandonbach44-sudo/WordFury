@@ -979,7 +979,7 @@ export default function WordBuilder() {
                 <Text
                   style={[
                     styles.wordListWord,
-                    { color: item.found ? COLORS.accent : background.secondaryText },
+                    { color: item.found ? background.accentColor : background.secondaryText },
                   ]}
                 >
                   {item.word}
@@ -1063,7 +1063,7 @@ export default function WordBuilder() {
           <Text style={[styles.timer, dynamicStyles.text, timeLeft <= 10 && styles.timerWarning]}>
             {formatTime(timeLeft)}
           </Text>
-          <Text style={styles.scoreText}>{score} pts</Text>
+          <Text style={[styles.scoreText, { color: background.accentColor }]}>{score} pts</Text>
         </View>
 
         {/* Top spacer pushes interactive content toward bottom for thumb reach */}
@@ -1125,8 +1125,8 @@ export default function WordBuilder() {
           <Text style={[styles.foundWordsTitle, dynamicStyles.textSecondary]}>Found: {foundWords.length}</Text>
           <View style={styles.foundWordsWrap}>
             {foundWords.map((word: string, index: number) => (
-              <View key={index} style={styles.foundWordBadgeSmall}>
-                <Text style={styles.foundWordTextSmall}>{word.toUpperCase()}</Text>
+              <View key={index} style={[styles.foundWordBadgeSmall, { borderColor: background.accentColor }]}>
+                <Text style={[styles.foundWordTextSmall, { color: background.accentColor }]}>{word.toUpperCase()}</Text>
               </View>
             ))}
           </View>
@@ -1218,7 +1218,7 @@ export default function WordBuilder() {
             styles.dailyCard,
             dynamicStyles.card,
             { borderWidth: 2 },
-            dailyPlayed && { borderColor: COLORS.accent }
+            dailyPlayed && { borderColor: background.accentColor }
           ]}>
             <Text style={[styles.dailyTitle, dynamicStyles.text]}>Daily Challenge</Text>
             <Text style={[styles.dailySubtitle, dynamicStyles.textSecondary]}>
@@ -1228,7 +1228,7 @@ export default function WordBuilder() {
             {/* Score display (only when completed) */}
             {dailyPlayed && dailyResult && (
               <View style={styles.dailyCompletedInfo}>
-                <Text style={styles.dailyCompletedScore}>{dailyResult.score}</Text>
+                <Text style={[styles.dailyCompletedScore, { color: background.accentColor }]}>{dailyResult.score}</Text>
                 <Text style={[styles.dailyCompletedLabel, dynamicStyles.textSecondary]}>
                   Today's Score • {dailyResult.words.length} words
                 </Text>
@@ -1362,7 +1362,7 @@ export default function WordBuilder() {
               'Race the clock — Blitz is 30s, Standard is 60s',
             ].map((rule, i) => (
               <View key={i} style={styles.ruleItem}>
-                <Text style={[styles.ruleNumber, { color: COLORS.accent }]}>{i + 1}</Text>
+                <Text style={[styles.ruleNumber, { color: background.accentColor }]}>{i + 1}</Text>
                 <Text style={[styles.ruleText, dynamicStyles.textSecondary]}>{rule}</Text>
               </View>
             ))}
@@ -1468,7 +1468,7 @@ export default function WordBuilder() {
               <Text style={[styles.statsTitle, dynamicStyles.text, { marginTop: 25 }]}>Daily History</Text>
               <DailyCalendar
                 history={dailyHistory}
-                accentColor={COLORS.accent}
+                accentColor={background.accentColor}
                 textColor={background.textColor}
                 secondaryTextColor={background.secondaryText}
                 cardColor={background.cardColor}
