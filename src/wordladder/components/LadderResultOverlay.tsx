@@ -110,7 +110,9 @@ const LadderResultOverlay: React.FC<Props> = ({
   // the close (X) button end up under other content where taps didn't
   // register.
   const overPar = steps - par;
-  const vsPar = !isWin ? '\u2014' : overPar === 0 ? 'E' : `+${overPar}`;
+  // "Par" rather than golf's bare "E", which testers read as a letter or an
+  // error code; it also matches the "Par!" title above.
+  const vsPar = !isWin ? '\u2014' : overPar === 0 ? 'Par' : `+${overPar}`;
 
   return (
     <>
