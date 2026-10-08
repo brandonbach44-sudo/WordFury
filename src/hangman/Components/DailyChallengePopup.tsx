@@ -76,7 +76,7 @@ export const DailyChallengePopup: React.FC<Props> = ({
         badge={category}
         cells={[
           { label: 'MISSES', value: `${incorrectCount}/${maxAttempts}` },
-          { label: 'WORD', value: word.toUpperCase() },
+          { label: 'LIVES LEFT', value: `${maxAttempts - incorrectCount}` },
           { label: 'STREAK', value: `${streak}`, headline: true },
         ]}
         groups={[

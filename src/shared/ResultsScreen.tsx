@@ -228,7 +228,11 @@ export const ResultsScreen: React.FC<Props> = ({
                       { color: toneColor(row.tone) },
                       row.total && [styles.rowValueTotal, { color: COLORS.accent }],
                     ]}
-                    numberOfLines={1}
+                    // Two lines and a little shrink so long values (Hangman's
+                    // movie-title answers) fit instead of running off-screen.
+                    numberOfLines={2}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
                   >
                     {row.value}
                   </Text>
@@ -347,7 +351,7 @@ const styles = StyleSheet.create({
   caption: { fontSize: 10, fontWeight: '800', letterSpacing: 2.2, marginBottom: 7 },
 
   row: { flexDirection: 'row', alignItems: 'baseline', gap: 6, paddingVertical: 3 },
-  rowLabel: { fontSize: 14, fontWeight: '600', flexShrink: 1 },
+  rowLabel: { fontSize: 14, fontWeight: '600', flexShrink: 0 },
   rowLabelTotal: { fontSize: 15, fontWeight: '900', letterSpacing: 1 },
   leader: {
     flex: 1,
@@ -356,7 +360,7 @@ const styles = StyleSheet.create({
     opacity: 0.55,
     transform: [{ translateY: -4 }],
   },
-  rowValue: { fontSize: 15, fontWeight: '800' },
+  rowValue: { fontSize: 15, fontWeight: '800', flexShrink: 1, textAlign: 'right' },
   rowValueTotal: { fontSize: 22, fontWeight: '900' },
 
   countdown: { alignItems: 'center', marginTop: 18 },

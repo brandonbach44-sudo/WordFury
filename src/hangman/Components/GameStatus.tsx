@@ -81,8 +81,8 @@ export const GameStatus: React.FC<GameStatusProps> = ({
         badge={category}
         cells={[
           { label: 'MISSES', value: `${incorrectGuesses}/${maxAttempts}` },
-          { label: 'LIVES LEFT', value: `${maxAttempts - incorrectGuesses}` },
-          { label: 'WORD', value: word.toUpperCase(), headline: true },
+          { label: 'GUESSES', value: `${totalGuesses}` },
+          { label: 'LIVES LEFT', value: `${maxAttempts - incorrectGuesses}`, headline: true },
         ]}
         groups={[
           {
