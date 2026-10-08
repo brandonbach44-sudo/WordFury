@@ -62,11 +62,16 @@ interface HexHivePlayScreenProps {
   mode: 'daily' | 'practice';
   initialFoundWords?: string[];
   initialTimeLeft?: number; // practice-only: restore timer from a previous session
+  // daily-only: the date this puzzle belongs to. Progress and history are
+  // saved under it rather than the wall-clock date at save time, so a word
+  // found after midnight on a board left open overnight still counts toward
+  // the puzzle it was found in.
+  dailyDateISO?: string;
   onGoHome: () => void;
   onPlayAgain?: () => void; // practice-only
 }
 
-export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, initialTimeLeft, onGoHome, onPlayAgain }: HexHivePlayScreenProps) {
+export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, initialTimeLeft, dailyDateISO, onGoHome, onPlayAgain }: HexHivePlayScreenProps) {
   const { background } = useTheme();
   const solution = useMemo(() => getPuzzleSolution(puzzle), [puzzle]);
   // The rank ladder (and the win condition) is computed against this
@@ -240,7 +245,7 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
     const justWon = mode === 'daily' && newRank.isMaxRank;
 
     if (mode === 'daily') {
-      await saveDailyProgress({ dateISO: getTodayDateString(), foundWords: newFound });
+      await saveDailyProgress({ dateISO: dailyDateISO ?? getTodayDateString(), foundWords: newFound });
     }
 
     // Update stats — daily and Quick Play each get their own lifetime
@@ -278,7 +283,7 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
 
     if (mode === 'daily') {
       await saveDailyHistoryEntry({
-        dateISO: getTodayDateString(),
+        dateISO: dailyDateISO ?? getTodayDateString(),
         score: newScore,
         maxScore: targetScore,
         wordsFound: newFound.length,
