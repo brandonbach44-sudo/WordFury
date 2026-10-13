@@ -41,6 +41,7 @@ import { maybeRequestReview } from '../../src/shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../src/shared/dailyReminders';
 import { AchievementPopup } from '../../src/shared/AchievementPopup';
 import WordSearchResultOverlay, { type WordSearchResultData } from '../../src/wordsearch/components/WordSearchResultOverlay';
+import { incrementWordSearchPracticeRoundsThisSession } from '../../src/wordsearch/utils/sessionStats';
 
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -226,14 +227,14 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
   );
   const [lifetimeStats, setLifetimeStats] = useState<WordSearchStats | null>(null);
   const [pendingAchievements, setPendingAchievements] = useState<WSAchievement[]>([]);
-  const [currentPopup, setCurrentPopup] = useState<WSAchievement | null>(null);
+  const [roundsThisSession, setRoundsThisSession] = useState(0);
 
-  useEffect(() => {
-    if (pendingAchievements.length > 0 && !currentPopup) {
-      setCurrentPopup(pendingAchievements[0]);
-      setPendingAchievements(prev => prev.slice(1));
-    }
-  }, [pendingAchievements, currentPopup]);
+  // A View Results re-open must show nothing but the themed background under
+  // the results overlay -- not the finished grid, which would otherwise
+  // flash into view for a frame while the overlay slides up. Revealed once
+  // the player closes the overlay, so they land on the completed board same
+  // as before rather than bouncing back to the menu.
+  const [boardRevealed, setBoardRevealed] = useState(!alreadyLocked);
 
   // Resume from a previous session: the puzzle grid is deterministic per
   // day (same seed), so we can match saved word strings back against
@@ -552,6 +553,7 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
 
       if (!isDaily) {
         clearWordSearchPracticeProgress().catch(() => {});
+        setRoundsThisSession(incrementWordSearchPracticeRoundsThisSession());
       }
 
       if (isDaily) {
@@ -694,6 +696,8 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
     <SafeAreaView style={[styles.container, { backgroundColor: background.backgroundColor }]}>
       <StatusBar barStyle={background.statusBar === 'light' ? 'light-content' : 'dark-content'} />
 
+      {boardRevealed && (
+      <>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.6} hitSlop={10}>
@@ -851,11 +855,13 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
         </View>
 
       </ScrollView>
+      </>
+      )}
 
       {/* ── Achievement popup ── */}
       <AchievementPopup
-        achievement={currentPopup}
-        onDismiss={() => setCurrentPopup(null)}
+        achievements={pendingAchievements}
+        onDismiss={() => setPendingAchievements([])}
         backgroundColor={background.cardColor}
         textColor={background.textColor}
       />
@@ -870,8 +876,12 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
           difficulty={difficulty}
           resultData={resultData}
           lifetimeStats={lifetimeStats}
+          roundsThisSession={roundsThisSession}
           nextDailySecondsRemaining={dailyCountdownSeconds}
-          onClose={() => setResultData(null)}
+          onClose={() => {
+            setResultData(null);
+            setBoardRevealed(true);
+          }}
           onPlayAgain={() => router.replace({ pathname: '/wordsearch/game', params: { themeId, difficulty } })}
           onGoHome={() => {
             // router.replace() mounts a brand-new /wordsearch screen and
@@ -881,8 +891,8 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
             // one transition, nothing left to flash.
             router.dismissTo('/wordsearch');
           }}
-          achievement={currentPopup}
-          onDismissAchievement={() => setCurrentPopup(null)}
+          achievements={pendingAchievements}
+          onDismissAchievement={() => setPendingAchievements([])}
           puzzleGrid={puzzleData.grid}
           puzzleWords={puzzleData.words}
           foundWordTexts={gameState.foundWords.map(w => w.word)}

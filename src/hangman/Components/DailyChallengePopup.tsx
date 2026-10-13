@@ -1,9 +1,10 @@
 import React from 'react';
 
 import { useTheme } from '../../shared/ThemeContext';
-import { ResultsScreen } from '../../shared/ResultsScreen';
+import { ResultsScreen, type PillTriple } from '../../shared/ResultsScreen';
 import { AchievementPopup, AchievementLike } from '../../shared/AchievementPopup';
 import { buildHangmanShareText, useCountdownToMidnight } from '../utils/dailyChallenge';
+import { HangmanSignature } from './HangmanSignature';
 
 type Props = {
   visible: boolean;
@@ -17,7 +18,7 @@ type Props = {
   onBackToMenu: () => void;
   onClose: () => void;
   // Achievement toast to render inside this Modal — see AchievementPopup.
-  achievement?: AchievementLike | null;
+  achievements?: AchievementLike[];
   onDismissAchievement?: () => void;
 };
 
@@ -32,7 +33,7 @@ export const DailyChallengePopup: React.FC<Props> = ({
   maxAttempts,
   onBackToMenu,
   onClose,
-  achievement = null,
+  achievements = [],
   onDismissAchievement,
 }) => {
   const { background } = useTheme();
@@ -60,6 +61,12 @@ export const DailyChallengePopup: React.FC<Props> = ({
     } catch (e) {}
   };
 
+  const pills: PillTriple = [
+    { label: 'Misses', value: `${incorrectCount}/${maxAttempts}` },
+    { label: 'Lives', value: `${maxAttempts - incorrectCount}` },
+    { label: 'Best', value: `${bestStreak}` },
+  ];
+
   // Rendered in a native Modal so this always covers the full screen,
   // regardless of the parent play screen's layout. The achievement toast is
   // rendered again as the last child below, inside this same Modal, since a
@@ -73,38 +80,17 @@ export const DailyChallengePopup: React.FC<Props> = ({
         onClose={onClose}
         title={title}
         subtitle={subtitle}
-        badge={category}
-        cells={[
-          { label: 'MISSES', value: `${incorrectCount}/${maxAttempts}` },
-          { label: 'LIVES LEFT', value: `${maxAttempts - incorrectCount}` },
-          { label: 'STREAK', value: `${streak}`, headline: true },
-        ]}
-        groups={[
-          {
-            caption: 'THIS GAME',
-            rows: [
-              { label: 'Result', value: won ? 'Solved' : 'Lost',
-                tone: (won ? 'good' : 'warn') as 'good' | 'warn' },
-              { label: 'Word', value: word.toUpperCase() },
-              { label: 'Category', value: category },
-              { label: 'Wrong guesses', value: `${incorrectCount} of ${maxAttempts}` },
-            ],
-          },
-          {
-            caption: 'DAILY STREAK',
-            rows: [
-              { label: 'Current', value: `${streak} ${streak === 1 ? 'day' : 'days'}` },
-              { label: 'Best', value: `${bestStreak} ${bestStreak === 1 ? 'day' : 'days'}` },
-            ],
-          },
-        ]}
-        countdown={{ label: 'NEXT DAILY IN', value: countdown }}
+        badge={[category]}
+        hero={{ label: 'Streak', value: `${streak}` }}
+        pills={pills}
+        signature={<HangmanSignature word={word} solved={won} incorrectGuesses={incorrectCount} maxAttempts={maxAttempts} />}
+        countdown={{ label: 'Next daily in', value: countdown }}
         onMainMenu={onBackToMenu}
         onShare={handleShare}
         shareLabel="Share Result"
       />
       <AchievementPopup
-        achievement={achievement}
+        achievements={achievements}
         onDismiss={onDismissAchievement ?? (() => {})}
         backgroundColor={CARD}
         textColor={TEXT}

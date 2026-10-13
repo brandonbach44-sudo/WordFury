@@ -120,9 +120,15 @@ const LadderPlayScreen: React.FC<Props> = ({
     current: null,
     best: null,
   });
+  const [finalModeStats, setFinalModeStats] = useState<{
+    gamesPlayed: number;
+    currentStreak: number;
+    bestStreak: number;
+    bestStepsOverPar: number | null;
+    fastestTimeSeconds: number | null;
+  } | null>(null);
 
   const [pendingAchievements, setPendingAchievements] = useState<Achievement[]>([]);
-  const [currentPopupAchievement, setCurrentPopupAchievement] = useState<Achievement | null>(null);
 
   // Offset the start time backward by however much play time already
   // happened in a previous session, so the timer keeps counting up
@@ -146,6 +152,13 @@ const LadderPlayScreen: React.FC<Props> = ({
     if (!alreadyLocked) return;
     loadLadderStats().then((stats) => {
       setFinalStreaks({ current: stats.daily.currentStreak, best: stats.daily.bestStreak });
+      setFinalModeStats({
+        gamesPlayed: stats.daily.gamesPlayed,
+        currentStreak: stats.daily.currentStreak,
+        bestStreak: stats.daily.bestStreak,
+        bestStepsOverPar: stats.daily.bestStepsOverPar,
+        fastestTimeSeconds: stats.daily.fastestTimeSeconds,
+      });
     });
   }, [alreadyLocked]);
 
@@ -185,13 +198,6 @@ const LadderPlayScreen: React.FC<Props> = ({
   useEffect(() => {
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
   }, [chain.length]);
-
-  useEffect(() => {
-    if (pendingAchievements.length > 0 && !currentPopupAchievement) {
-      setCurrentPopupAchievement(pendingAchievements[0]);
-      setPendingAchievements((prev) => prev.slice(1));
-    }
-  }, [pendingAchievements, currentPopupAchievement]);
 
   const tileSize = useMemo(() => {
     const gap = 6;
@@ -276,6 +282,13 @@ const LadderPlayScreen: React.FC<Props> = ({
       await clearQuickPlayProgress();
     }
 
+    setFinalModeStats({
+      gamesPlayed: modeStats.gamesPlayed,
+      currentStreak: modeStats.currentStreak,
+      bestStreak: modeStats.bestStreak,
+      bestStepsOverPar: modeStats.bestStepsOverPar,
+      fastestTimeSeconds: modeStats.fastestTimeSeconds,
+    });
     await saveLadderStats(stats);
 
     const result: LadderGameResult = {
@@ -456,8 +469,8 @@ const LadderPlayScreen: React.FC<Props> = ({
 
       {/* Achievement Popup */}
       <AchievementPopup
-        achievement={currentPopupAchievement}
-        onDismiss={() => setCurrentPopupAchievement(null)}
+        achievements={pendingAchievements}
+        onDismiss={() => setPendingAchievements([])}
         backgroundColor={background.cardColor}
         textColor={background.textColor}
       />
@@ -682,12 +695,12 @@ const LadderPlayScreen: React.FC<Props> = ({
         status={alreadyLocked && lockedResult ? (lockedResult.result === 'won' ? 'won' : 'gave_up') : status === 'won' ? 'won' : 'gave_up'}
         startWord={puzzle.start}
         endWord={puzzle.end}
+        chain={displayChain}
         steps={alreadyLocked && lockedResult ? lockedResult.steps : chain.length - 1}
         par={puzzle.par}
         timeSeconds={alreadyLocked && lockedResult ? lockedResult.timeSeconds : elapsed}
         hintsUsed={alreadyLocked && lockedResult ? lockedResult.hintsUsed : hintsUsed}
-        currentStreak={finalStreaks.current}
-        bestStreak={finalStreaks.best}
+        lifetimeStats={finalModeStats}
         nextDailySecondsRemaining={mode === 'daily' ? parseCountdownSeconds(countdown) : null}
         shareText={shareText}
         onClose={() => {
@@ -700,8 +713,8 @@ const LadderPlayScreen: React.FC<Props> = ({
           onPlayAgain?.();
         }}
         onGoHome={onGoHome}
-        achievement={currentPopupAchievement}
-        onDismissAchievement={() => setCurrentPopupAchievement(null)}
+        achievements={pendingAchievements}
+        onDismissAchievement={() => setPendingAchievements([])}
       />
     </SafeAreaView>
   );

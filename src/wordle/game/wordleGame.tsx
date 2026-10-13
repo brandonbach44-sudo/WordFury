@@ -585,6 +585,9 @@ export default function WordleGame() {
   const [overlayEvaluationRows, setOverlayEvaluationRows] = useState<LetterState[][]>([]);
 
   const [stats, setStats] = useState<WordleStats>(() => createDefaultStats());
+  // Quick Play's results screen shows this instead of a daily streak, which
+  // doesn't apply outside the Daily. Session-only, never persisted.
+  const [sessionRecord, setSessionRecord] = useState({ wins: 0, losses: 0 });
   const [hydrated, setHydrated] = useState(false);
   const [prefs, setPrefs] = useState<WordlePrefs>({ hardMode: false, colorBlindMode: false, keyShape: 'square', keyStyle: 'filled', keySkin: 'default', keyDefaultVariant: 1 });
 
@@ -603,7 +606,6 @@ export default function WordleGame() {
 
   // Achievement popup state
   const [pendingAchievements, setPendingAchievements] = useState<Achievement[]>([]);
-  const [currentPopupAchievement, setCurrentPopupAchievement] = useState<Achievement | null>(null);
   // Track IDs already unlocked at session start so we don't re-fire old ones
   const sessionStartUnlockedRef = useRef<Set<string> | null>(null);
 
@@ -719,6 +721,10 @@ export default function WordleGame() {
         setStats(mergeLoadedStats(loadedStats));
 
         let lockedToday = false;
+        // Set alongside lockedToday so the completed-Daily restore below can
+        // read a properly narrowed (non-null) lock rather than loadedLock,
+        // whose null check here does not persist to code further down.
+        let todayLock: typeof loadedLock | null = null;
         if (
           loadedLock &&
           typeof loadedLock === "object" &&
@@ -742,82 +748,109 @@ export default function WordleGame() {
                 : undefined,
           });
           lockedToday = loadedLock.dateISO === getTodayISODate();
-
-          // Daily is already completed for today — reflect that in game
-          // state immediately, otherwise `status` stays at its default
-          // "playing" and the "Leave Daily Challenge?" prompt (which only
-          // guards an in-progress attempt) fires on every remount even
-          // though there's nothing left to leave.
-          //
-          // Guarded on screenRef still being "menu": this hydration read is
-          // async and can resolve after the player has already tapped into
-          // a game (Quick Play or otherwise). Without this check, a slow
-          // resolution would silently overwrite their in-progress board
-          // with the Daily's old completed state from earlier — including
-          // yanking them into a stale results screen mid-Quick-Play.
-          if (lockedToday && screenRef.current === "menu") {
-            setGameMode("daily");
-            setStatus(loadedLock.result);
-            setSolution(getDailySolution());
-            if (Array.isArray(loadedLock.guesses)) {
-              setGuesses(loadedLock.guesses);
-              // Immediately show colored back face for all restored rows —
-              // no flip animation needed for already-completed guesses.
-              loadedLock.guesses.forEach((_: string, rowIndex: number) => {
-                for (let c = 0; c < COLS; c++) {
-                  flipAnims[rowIndex][c].setValue(1);
-                }
-              });
-            }
-            if (Array.isArray(loadedLock.evaluations)) {
-              setEvaluations(loadedLock.evaluations as EvaluatedLetter[][]);
-            }
-          }
+          todayLock = loadedLock;
         } else {
           setDailyLock(null);
         }
 
-        // Resume an in-progress Daily attempt (app closed/backgrounded mid-game)
-        // unless today's Daily is already completed. Same screenRef guard as
-        // above — don't clobber a game the player has already started.
-        if (!lockedToday && screenRef.current === "menu") {
-          const savedProgress = await loadDailyProgress();
-          if (isMounted && screenRef.current === "menu" && savedProgress && savedProgress.dateISO === getTodayISODate()) {
-            setGameMode("daily");
-            setSolution(getDailySolution());
-            setGuesses(savedProgress.guesses);
-            setEvaluations(savedProgress.evaluations as EvaluatedLetter[][]);
-            setCurrentGuess(savedProgress.currentGuess);
-            setStartTime(Date.now() - savedProgress.elapsedSeconds * 1000);
-            // Immediately show colored back face for all restored rows —
-            // no flip animation needed for already-submitted guesses.
-            savedProgress.guesses.forEach((_: string, rowIndex: number) => {
-              for (let c = 0; c < COLS; c++) {
-                flipAnims[rowIndex][c].setValue(1);
-              }
-            });
-            resumedDailyRef.current = true;
-            if (isMounted) setDailyInProgressToday(true);
-          }
-        }
+        // Exactly one game state gets restored below, decided up front
+        // rather than letting the completed-Daily, in-progress-Daily and
+        // in-progress-Quick-Play blocks each write over one another in
+        // sequence. That sequencing bug is what shipped in build 39: the
+        // completed-Daily branch set gameMode/status/solution/guesses/
+        // evaluations but not resumedDailyRef, so the Quick Play branch
+        // below it (guarded only on resumedDailyRef) also ran and
+        // overwrote every field it touches, EXCEPT status, message and
+        // resumedDailyRef itself. That left status stuck on "won" under a
+        // freshly-restored, unsolved practice board, and every input path
+        // guards on status !== "playing", so the keyboard went dead. Any
+        // future restore branch must set every field that defines game
+        // state, status and message included, or leave the others alone
+        // entirely.
+        //
+        // Guarded on screenRef still being "menu" throughout: this
+        // hydration read is async and can resolve after the player has
+        // already tapped into a game. Without this check, a slow
+        // resolution would silently overwrite their in-progress board with
+        // stale state from earlier.
+        if (screenRef.current === "menu") {
+          const savedDailyProgress = !lockedToday ? await loadDailyProgress() : null;
+          const inProgressDaily =
+            isMounted &&
+            screenRef.current === "menu" &&
+            !!savedDailyProgress &&
+            savedDailyProgress.dateISO === getTodayISODate();
 
-        // Resume an in-progress Quick Play (Practice) attempt.
-        // Only restore if we haven't already placed the player into the daily.
-        if (!resumedDailyRef.current && screenRef.current === "menu") {
-          const savedPractice = await loadPracticeProgress();
-          if (isMounted && savedPractice) {
-            setGameMode("practice");
-            setSolution(savedPractice.solution);
-            setGuesses(savedPractice.guesses);
-            setEvaluations(savedPractice.evaluations as EvaluatedLetter[][]);
-            setCurrentGuess(savedPractice.currentGuess);
-            setStartTime(Date.now() - savedPractice.elapsedSeconds * 1000);
-            savedPractice.guesses.forEach((_: string, rowIndex: number) => {
-              for (let c = 0; c < COLS; c++) {
-                flipAnims[rowIndex][c].setValue(1);
+          // Only bother loading a saved Quick Play attempt if the in-progress
+          // Daily above did not already win, since Quick Play only matters
+          // here as a fallback.
+          const savedPractice =
+            !inProgressDaily ? await loadPracticeProgress() : null;
+
+          if (isMounted && screenRef.current === "menu") {
+            if (inProgressDaily && savedDailyProgress) {
+              // Resume an in-progress Daily attempt (app closed/backgrounded mid-game).
+              setGameMode("daily");
+              setSolution(getDailySolution());
+              setGuesses(savedDailyProgress.guesses);
+              setEvaluations(savedDailyProgress.evaluations as EvaluatedLetter[][]);
+              setCurrentGuess(savedDailyProgress.currentGuess);
+              setStartTime(Date.now() - savedDailyProgress.elapsedSeconds * 1000);
+              setStatus("playing");
+              setMessage(null);
+              // Immediately show colored back face for all restored rows,
+              // no flip animation needed for already-submitted guesses.
+              savedDailyProgress.guesses.forEach((_: string, rowIndex: number) => {
+                for (let c = 0; c < COLS; c++) {
+                  flipAnims[rowIndex][c].setValue(1);
+                }
+              });
+              resumedDailyRef.current = true;
+              setDailyInProgressToday(true);
+            } else if (savedPractice) {
+              // Resume an in-progress Quick Play (Practice) attempt. This
+              // wins over a completed Daily's board below: it is a real
+              // unfinished game and the completed Daily is not. The lock
+              // recorded above still makes the menu show View Result and
+              // keeps the "Leave Daily Challenge?" prompt suppressed.
+              setGameMode("practice");
+              setSolution(savedPractice.solution);
+              setGuesses(savedPractice.guesses);
+              setEvaluations(savedPractice.evaluations as EvaluatedLetter[][]);
+              setCurrentGuess(savedPractice.currentGuess);
+              setStartTime(Date.now() - savedPractice.elapsedSeconds * 1000);
+              setStatus("playing");
+              setMessage(null);
+              savedPractice.guesses.forEach((_: string, rowIndex: number) => {
+                for (let c = 0; c < COLS; c++) {
+                  flipAnims[rowIndex][c].setValue(1);
+                }
+              });
+              resumedPracticeRef.current = true;
+            } else if (lockedToday && todayLock) {
+              // Daily is already completed for today and there is no
+              // unfinished game to restore instead. Reflect the completed
+              // board immediately, otherwise `status` stays at its default
+              // "playing" and the "Leave Daily Challenge?" prompt (which
+              // only guards an in-progress attempt) fires on every remount
+              // even though there's nothing left to leave.
+              setGameMode("daily");
+              setStatus(todayLock.result);
+              setSolution(getDailySolution());
+              if (Array.isArray(todayLock.guesses)) {
+                setGuesses(todayLock.guesses);
+                // Immediately show colored back face for all restored rows,
+                // no flip animation needed for already-completed guesses.
+                todayLock.guesses.forEach((_: string, rowIndex: number) => {
+                  for (let c = 0; c < COLS; c++) {
+                    flipAnims[rowIndex][c].setValue(1);
+                  }
+                });
               }
-            });
-            resumedPracticeRef.current = true;
+              if (Array.isArray(todayLock.evaluations)) {
+                setEvaluations(todayLock.evaluations as EvaluatedLetter[][]);
+              }
+            }
           }
         }
 
@@ -833,14 +866,6 @@ export default function WordleGame() {
     };
   }, []);
 
-
-  // Show popups one at a time
-  useEffect(() => {
-    if (pendingAchievements.length > 0 && !currentPopupAchievement) {
-      setCurrentPopupAchievement(pendingAchievements[0]);
-      setPendingAchievements((prev) => prev.slice(1));
-    }
-  }, [pendingAchievements, currentPopupAchievement]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -873,8 +898,15 @@ export default function WordleGame() {
 
   const closeResult = useCallback(() => {
     setShowResult(false);
+    // Opened from the menu without ever switching to the game screen (see
+    // openDailyResultFromMenu) -- reveal the completed board only now that
+    // the overlay is closing, not before, so it never flashes behind the
+    // overlay's opening slide.
+    if (overlayOrigin === "menu_view") {
+      setScreen("game");
+    }
     setOverlayOrigin("game_end");
-  }, []);
+  }, [overlayOrigin]);
 
   const goToMenu = useCallback((tab: MenuTab = "play") => {
     setMenuTab(tab);
@@ -1037,10 +1069,12 @@ export default function WordleGame() {
   const openDailyResultFromMenu = useCallback(() => {
     if (!isDailyCompletedToday) return;
 
-    // Switch to the game screen underneath so closing the overlay lands the
-    // player on their completed board instead of bouncing back to the menu.
+    // Stay on the menu screen underneath -- switching to "game" here would
+    // mount the completed board a frame before the overlay finishes sliding
+    // up over it. closeResult() switches to "game" once the overlay closes,
+    // so the player still lands on their completed board rather than
+    // bouncing back to the menu.
     setGameMode("daily");
-    setScreen("game");
 
     setOverlayOrigin("menu_view");
     setOverlayMode("daily");
@@ -1114,6 +1148,12 @@ export default function WordleGame() {
 
       if (result === "won") triggerWinBounce();
 
+      if (gameMode === "practice") {
+        setSessionRecord((prev) =>
+          result === "won" ? { ...prev, wins: prev.wins + 1 } : { ...prev, losses: prev.losses + 1 }
+        );
+      }
+
       // Update overlay payload first (so it can be opened later even if we jump back to menu)
       setOverlayOrigin("game_end");
       setOverlayMode(gameMode);
@@ -1135,7 +1175,7 @@ export default function WordleGame() {
       );
       const resultStr = result === "won" ? `${guessesUsed}/6` : "X/6";
       const header = gameMode === "daily"
-        ? `🟩 FURDLE DAILY #${getDailyIndex()}`
+        ? "🟩 FURDLE DAILY"
         : "🟩 FURDLE";
 
       // Mirrors the streak math in the stats updater below, computed here
@@ -1711,8 +1751,8 @@ export default function WordleGame() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: BG }]} edges={['top', 'left', 'right']}>
       <AchievementPopup
-        achievement={currentPopupAchievement as any}
-        onDismiss={() => setCurrentPopupAchievement(null)}
+        achievements={pendingAchievements as any}
+        onDismiss={() => setPendingAchievements([])}
         backgroundColor={CARD}
         textColor={TEXT}
       />
@@ -1872,7 +1912,7 @@ export default function WordleGame() {
                           const fallbackStreakLine = stats.daily.currentStreak > 1 ? `${stats.daily.currentStreak} day streak` : "";
                           // Built imperatively so the blank-line spacers
                           // survive — see the same fix in endGame() above.
-                          const fallbackLines: string[] = [`🟩 FURDLE DAILY #${getDailyIndex()}`];
+                          const fallbackLines: string[] = ["🟩 FURDLE DAILY"];
                           if (fallbackGrid) fallbackLines.push(fallbackGrid);
                           fallbackLines.push("", fallbackStatsLine);
                           if (fallbackStreakLine) fallbackLines.push(fallbackStreakLine);
@@ -2307,13 +2347,10 @@ export default function WordleGame() {
           guessesCount={overlayGuessesCount}
           timeSeconds={overlayTimeSeconds}
           currentStreak={overlayMode === "daily" ? stats.daily.currentStreak : null}
-          bestStreak={overlayMode === "daily" ? stats.daily.bestStreak : null}
           winPercentage={overlayMode === "daily" ? winRateDaily : winRatePractice}
-          gamesPlayed={overlayMode === "daily" ? stats.daily.gamesPlayed : stats.practice.gamesPlayed}
           bestGuessCount={overlayMode === "daily" ? stats.daily.bestGuessCount : stats.practice.bestGuessCount}
           guessDistribution={overlayMode === "daily" ? stats.daily.guessDistribution : stats.practice.guessDistribution}
-          averageTimeSeconds={overlayMode === "daily" ? (avgTimeDaily ?? null) : (avgTimePractice ?? null)}
-          averageGuesses={overlayMode === "daily" ? (avgGuessesDaily ?? null) : (avgGuessesPractice ?? null)}
+          sessionRecord={sessionRecord}
           onClose={() => {
             // Closing just dismisses the overlay so the player can look at
             // their completed puzzle instead of being bounced to the menu.
@@ -2337,8 +2374,8 @@ export default function WordleGame() {
           nextDailySecondsRemaining={overlayMode === "daily" && isDailyCompletedToday ? nextDailySeconds : null}
           shareText={overlayShareText}
           evaluationRows={overlayEvaluationRows}
-          achievement={currentPopupAchievement as any}
-          onDismissAchievement={() => setCurrentPopupAchievement(null)}
+          achievements={pendingAchievements as any}
+          onDismissAchievement={() => setPendingAchievements([])}
         />
       </View>
 
@@ -2963,6 +3000,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 4,
     paddingBottom: 6,
+    // Raises the keyboard and ENTER button together off the bottom edge --
+    // gameTopArea's flex:1 leftover space sits just above this block, so
+    // this margin comes out of that gap rather than compressing the puzzle
+    // grid above it.
+    marginBottom: 14,
     flexShrink: 0,
   },
 

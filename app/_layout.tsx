@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from '../src/shared/ThemeContext';
 import { syncDailyReminder } from '../src/shared/dailyReminders';
 import { HapticManager } from '../src/shared/HapticManager';
+import { MotionPreference } from '../src/shared/motionPreference';
 
 // Pre-warm the large shared word list (~41k entries) at app startup. Without
 // this, the first navigation to Word Ladder or Anagrams triggers construction
@@ -81,6 +82,10 @@ export default function RootLayout() {
     // only inside Wordsmith, so a player who never opened Wordsmith never had
     // their preference applied in any other game.
     HapticManager.init();
+
+    // Same reasoning as above: load the background motion preference once,
+    // at startup, so every screen that renders FallingLetters sees it.
+    MotionPreference.init();
 
     // Pre-warm Word Ladder word buckets 2 seconds after the home screen
     // appears, while the player is still reading the menu. Wrapped in

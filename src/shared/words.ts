@@ -5,6 +5,9 @@
 // languages, zodiac signs, mythology, etc.)
 // 2026-07-10: trimmed to zipf>=2.0, slurs removed; 43 pangram-critical
 // words restored below the cutoff to keep existing Hex Hive puzzles solvable.
+// A small number of other below-cutoff words are kept as deliberate
+// exceptions too (e.g. "dule", from a tester report) -- not every word
+// under the cutoff is here for solvability.
 
 export const VALID_WORDS = new Set([
 'aardvark',
@@ -8950,6 +8953,7 @@ export const VALID_WORDS = new Set([
 'dukes',
 'dulcet',
 'dulcimer',
+'dule',
 'dull',
 'dulled',
 'duller',
@@ -23341,6 +23345,7 @@ export const VALID_WORDS = new Set([
 'ragged',
 'raggedy',
 'ragging',
+'raggy',
 'raging',
 'ragini',
 'raglan',
@@ -23401,6 +23406,7 @@ export const VALID_WORDS = new Set([
 'raking',
 'rakish',
 'raku',
+'rale',
 'rallied',
 'rallies',
 'rally',
@@ -23948,6 +23954,7 @@ export const VALID_WORDS = new Set([
 'regale',
 'regaled',
 'regalia',
+'regally',
 'regard',
 'regarded',
 'regards',
@@ -24846,6 +24853,7 @@ export const VALID_WORDS = new Set([
 'rollout',
 'rollover',
 'rolls',
+'rolly',
 'rom',
 'roma',
 'romaine',
@@ -25658,6 +25666,10 @@ export const VALID_WORDS = new Set([
 'sciatica',
 'science',
 'sciences',
+'scientific',
+'scientist',
+'scientistic',
+'scientists',
 'scimitar',
 'scion',
 'scions',
@@ -25801,6 +25813,7 @@ export const VALID_WORDS = new Set([
 'scullery',
 'scullion',
 'sculls',
+'sculp',
 'sculpt',
 'sculpted',
 'sculptor',
@@ -26065,6 +26078,7 @@ export const VALID_WORDS = new Set([
 'sensual',
 'sent',
 'sentence',
+'sentences',
 'sentient',
 'sentinel',
 'sentries',
