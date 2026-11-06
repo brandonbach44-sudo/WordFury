@@ -5,7 +5,7 @@ Enroll in that ($99/yr) as late as possible, only when you hit Phase 3, so the
 1-year clock starts as close to your actual launch as you can get it.
 
 ## Phase 1 — No Apple account needed, do these now
-- [ ] **Enable GitHub Pages**: repo Settings → Pages → Source: `main` branch, `/docs` folder. Confirm the privacy policy loads at `https://brandonbach44-sudo.github.io/Word-Game/`.
+- [ ] **Enable GitHub Pages**: repo Settings → Pages → Source: `main` branch, `/docs` folder. Confirm the privacy policy loads at `https://brandonbach44-sudo.github.io/WordFury/`.
 - [ ] **Decide on `supportsTablet`**: keep `true` (means testing/screenshotting an iPad layout later) or turn it off for an iPhone-only launch. Tell me which and I'll flip the app.json flag.
 - [x] **Test on your real iPhone via Expo Go** (free, no dev account): `npx expo start`, scan the QR code with the Expo Go app. Playtest all 8 games end to end — progress saving, achievements, daily challenges, dark mode, color blind mode.
 - [ ] Fix anything broken you find.
