@@ -201,15 +201,25 @@ const WordleResultOverlay = ({
     </Card>
   ) : undefined;
 
+  // Average guesses across every win, from the same distribution the chart
+  // draws. Replaces Best Solve, which saturates: most players hit a lucky 2
+  // early and the number never moves again, while an average keeps changing.
+  const solvedTotal = guessDistribution
+    ? [1, 2, 3, 4, 5, 6].reduce((sum, n) => sum + (guessDistribution[n] ?? 0), 0)
+    : 0;
+  const averageGuesses = guessDistribution && solvedTotal > 0
+    ? [1, 2, 3, 4, 5, 6].reduce((sum, n) => sum + n * (guessDistribution[n] ?? 0), 0) / solvedTotal
+    : null;
+
   // Games Played and Best Streak come out here -- Win Rate is the one number
   // not trivially recomputed elsewhere, and Current Streak is what carries
   // weight right after finishing. The full archive stays on the stats page.
-  const lifetime: LifetimeSpec | undefined = winPercentage != null || currentStreak != null || bestGuessCount != null
+  const lifetime: LifetimeSpec | undefined = winPercentage != null || currentStreak != null || averageGuesses != null
     ? {
         pills: [
           { label: "Win Rate", value: winPercentage != null ? `${winPercentage}%` : "-" },
           { label: "Streak", value: `${currentStreak ?? 0}` },
-          { label: "Best Solve", value: bestGuessCount != null ? `${bestGuessCount}` : "-" },
+          { label: "Average", value: averageGuesses != null ? averageGuesses.toFixed(1) : "-" },
         ],
       }
     : undefined;
