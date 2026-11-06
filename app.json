@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "com.bachapps.wordfury",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
