@@ -2349,6 +2349,7 @@ export default function WordleGame() {
           currentStreak={overlayMode === "daily" ? stats.daily.currentStreak : null}
           winPercentage={overlayMode === "daily" ? winRateDaily : winRatePractice}
           bestGuessCount={overlayMode === "daily" ? stats.daily.bestGuessCount : stats.practice.bestGuessCount}
+          bestStreak={overlayMode === "daily" ? stats.daily.bestStreak : stats.practice.bestStreak}
           guessDistribution={overlayMode === "daily" ? stats.daily.guessDistribution : stats.practice.guessDistribution}
           sessionRecord={sessionRecord}
           onClose={() => {

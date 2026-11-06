@@ -18,6 +18,9 @@ type Props = {
   currentStreak: number | null;
   winPercentage: number | null;
   bestGuessCount: number | null;
+  // Longest run of consecutive wins in this mode. Shown in the all-time row
+  // instead of the current streak, which the screen already shows above it.
+  bestStreak: number | null;
   guessDistribution: Record<number, number> | null;
   // Quick Play's results screen shows this instead of a daily streak, which
   // doesn't apply outside the Daily.
@@ -105,6 +108,7 @@ const WordleResultOverlay = ({
   currentStreak,
   winPercentage,
   bestGuessCount,
+  bestStreak,
   guessDistribution,
   sessionRecord,
   onClose,
@@ -211,15 +215,16 @@ const WordleResultOverlay = ({
     ? [1, 2, 3, 4, 5, 6].reduce((sum, n) => sum + n * (guessDistribution[n] ?? 0), 0) / solvedTotal
     : null;
 
-  // Games Played and Best Streak come out here -- Win Rate is the one number
-  // not trivially recomputed elsewhere, and Current Streak is what carries
-  // weight right after finishing. The full archive stays on the stats page.
-  const lifetime: LifetimeSpec | undefined = winPercentage != null || currentStreak != null || averageGuesses != null
+  // Win Rate, Average and Best Streak. Current streak stays out of this row:
+  // on a daily win it is already the hero, on a loss it is already a round
+  // pill, and on Quick Play it read 0 and meant nothing. Best Streak gives the
+  // current one something to chase. The full archive stays on the stats page.
+  const lifetime: LifetimeSpec | undefined = winPercentage != null || averageGuesses != null || bestStreak != null
     ? {
         pills: [
           { label: "Win Rate", value: winPercentage != null ? `${winPercentage}%` : "-" },
-          { label: "Streak", value: `${currentStreak ?? 0}` },
           { label: "Average", value: averageGuesses != null ? averageGuesses.toFixed(1) : "-" },
+          { label: "Best Streak", value: bestStreak != null ? `${bestStreak}` : "-" },
         ],
       }
     : undefined;
