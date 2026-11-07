@@ -61,6 +61,7 @@ import {
 import {
   checkAchievements,
   getUnlockedAchievements,
+  recheckScoreAchievements,
   ACHIEVEMENTS,
   type Achievement,
 } from '../utils/achievements';
@@ -205,12 +206,24 @@ export default function GameScreen() {
   const [pendingAchievements, setPendingAchievements] = useState<Achievement[]>([]);
 
   useEffect(() => {
-    loadWordGridStats().then(setStats);
+    // The single-game score thresholds were lowered in 1.0.1, so grant any
+    // the existing high score already earns before loading the unlocked list.
+    // This only ever returns something once per achievement, and several at
+    // once collapse into one card in AchievementPopup.
+    loadWordGridStats()
+      .then(async (loaded) => {
+        setStats(loaded);
+        const newly = await recheckScoreAchievements(loaded.highScore);
+        if (newly.length > 0) setPendingAchievements((prev) => [...prev, ...newly]);
+      })
+      .catch(() => {})
+      .finally(() => {
+        getUnlockedAchievements().then(setUnlockedAchievements);
+      });
     loadDailyWordGridStats().then(setDailyStats);
     loadWordGridDailyHistory()
       .then((h) => setDailyHistory(h as CalendarHistory))
       .catch(() => {});
-    getUnlockedAchievements().then(setUnlockedAchievements);
   }, []);
 
   // ── Game mode & daily ─────────────────────────────────────────────────────

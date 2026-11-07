@@ -23,10 +23,13 @@ export const ACHIEVEMENTS: Achievement[] = [
   // Single-game score milestones
   { id: 'score_500', category: 'score_milestone', name: 'Warming Up',   description: 'Score 500+ in one game' },
   { id: 'score_1000', category: 'score_milestone', name: 'On Fire',      description: 'Score 1,000+ in one game' },
-  { id: 'score_2000', category: 'score_milestone', name: 'Century Club', description: 'Score 2,000+ in one game' },
-  { id: 'score_4000', category: 'score_milestone', name: 'Rising Star',  description: 'Score 4,000+ in one game' },
-  { id: 'score_6000', category: 'score_milestone', name: 'Word King',    description: 'Score 6,000+ in one game' },
-  { id: 'score_10000', category: 'score_milestone', name: 'Diamond Mind', description: 'Score 10,000+ in one game' },
+  // The ids above 1,000 keep their original numbers so existing unlocks
+  // carry over; the thresholds were lowered to what a 60 second round can
+  // actually reach (see SCORE_THRESHOLDS).
+  { id: 'score_2000', category: 'score_milestone', name: 'Century Club', description: 'Score 1,500+ in one game' },
+  { id: 'score_4000', category: 'score_milestone', name: 'Rising Star',  description: 'Score 2,500+ in one game' },
+  { id: 'score_6000', category: 'score_milestone', name: 'Word King',    description: 'Score 3,500+ in one game' },
+  { id: 'score_10000', category: 'score_milestone', name: 'Diamond Mind', description: 'Score 5,000+ in one game' },
 
   // Words per game milestones
   { id: 'wpg_5', category: 'words_per_game', name: 'Word Scout',   description: 'Find 5+ words in one game' },
@@ -53,6 +56,16 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'lifetime_100000', category: 'lifetime_score',  name: 'Silver',    description: 'Reach 100,000 lifetime score' },
   { id: 'lifetime_500000', category: 'lifetime_score',  name: 'Gold',      description: 'Reach 500,000 lifetime score' },
   { id: 'lifetime_1000000', category: 'lifetime_score',  name: 'Diamond',   description: 'Reach 1,000,000 lifetime score' },
+];
+
+/** Single-game score thresholds. A strong round lands around 2,000 to 4,000. */
+const SCORE_THRESHOLDS: [number, string][] = [
+  [500, 'score_500'],
+  [1000, 'score_1000'],
+  [1500, 'score_2000'],
+  [2500, 'score_4000'],
+  [3500, 'score_6000'],
+  [5000, 'score_10000'],
 ];
 
 // ── Storage ────────────────────────────────────────────────
@@ -124,12 +137,9 @@ export async function checkAchievements(
 
   // Single-game score
   const s = result.score;
-  if (s >= 500)   await push('score_500');
-  if (s >= 1000)  await push('score_1000');
-  if (s >= 2000)  await push('score_2000');
-  if (s >= 4000)  await push('score_4000');
-  if (s >= 6000)  await push('score_6000');
-  if (s >= 10000) await push('score_10000');
+  for (const [threshold, id] of SCORE_THRESHOLDS) {
+    if (s >= threshold) await push(id);
+  }
 
   // Words per game
   const wc = result.words.length;
@@ -161,6 +171,24 @@ export async function checkAchievements(
   if (ls >= 500000)  await push('lifetime_500000');
   if (ls >= 1000000) await push('lifetime_1000000');
 
+  if (newly.length > 0) await save(data);
+  return newly;
+}
+
+/**
+ * Grants any single-game score achievement the player's best game already
+ * earns. The thresholds were lowered, so a player whose high score beat a new
+ * threshold before the change gets it here, once: tryUnlock skips anything
+ * already unlocked, so later calls return nothing and show no card.
+ */
+export async function recheckScoreAchievements(highScore: number): Promise<Achievement[]> {
+  const data = await load();
+  const newly: Achievement[] = [];
+  for (const [threshold, id] of SCORE_THRESHOLDS) {
+    if (highScore < threshold) continue;
+    const a = await tryUnlock(data, id);
+    if (a) newly.push(a);
+  }
   if (newly.length > 0) await save(data);
   return newly;
 }
