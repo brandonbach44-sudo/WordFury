@@ -188,7 +188,7 @@ export default function AnagramsEntryScreen() {
   const handleShare = async () => {
     if (!dailyLock) return;
     const result = dailyLock.won
-      ? `Solved all 5 words — Score ${dailyLock.totalScore}${dailyLock.perfectBonusApplied ? ' (Perfect Run!)' : ''}`
+      ? `Solved all 5 words, Score ${dailyLock.totalScore}${dailyLock.perfectBonusApplied ? ' (Perfect Run!)' : ''}`
       : `Score ${dailyLock.totalScore}`;
     const streakLine = (stats?.daily.currentStreak ?? 0) > 1 ? `\n${stats?.daily.currentStreak} day streak` : '';
     const message = `Anagrams Daily\n${formatDisplayDate()}\n${result}${streakLine}`;
@@ -346,7 +346,7 @@ export default function AnagramsEntryScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.modeTitle, { color: background.textColor }]}>Classic</Text>
                 <Text style={[styles.modeDesc, { color: background.secondaryText }]}>
-                  Unscramble 5 words, easiest to hardest — unlimited replays
+                  Unscramble 5 words, easiest to hardest, unlimited replays
                 </Text>
               </View>
             </TouchableOpacity>
@@ -360,7 +360,7 @@ export default function AnagramsEntryScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.modeTitle, { color: background.textColor }]}>Categories</Text>
                 <Text style={[styles.modeDesc, { color: background.secondaryText }]}>
-                  Same 5-word run, themed words — Animals, Food, Countries & more
+                  Same 5-word run, themed words, Animals, Food, Countries & more
                 </Text>
               </View>
             </TouchableOpacity>
@@ -371,7 +371,7 @@ export default function AnagramsEntryScreen() {
                 'Unscramble each set of letters into a real word',
                 'Words get progressively longer and harder as you go',
                 'Solve fast and hint-free for the highest score',
-                'Stuck? Skip a word — it just won\'t count toward your score',
+                'Stuck? Skip a word, it just won\'t count toward your score',
               ].map((rule, i) => (
                 <View key={i} style={styles.ruleRow}>
                   <Text style={[styles.ruleNum, { color: background.accentColor }]}>{i + 1}</Text>

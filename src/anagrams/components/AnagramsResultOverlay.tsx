@@ -8,7 +8,8 @@ import { Share, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '../../shared/ThemeContext';
 import { AchievementPopup, AchievementLike } from '../../shared/AchievementPopup';
-import { ResultsScreen, Card, type PillTriple, type LifetimeSpec } from '../../shared/ResultsScreen';
+import { ResultsScreen, Card, withOpacity, type PillTriple, type LifetimeSpec } from '../../shared/ResultsScreen';
+import { accentForGame } from '../../shared/gameColors';
 import type { RoundResult } from '../utils/scoring';
 
 export interface AnagramsLifetimeStats {
@@ -22,6 +23,8 @@ export interface AnagramsLifetimeStats {
 type Props = {
   visible: boolean;
   mode: 'daily' | 'practice';
+  // What to show for each round: the word the player typed when solved,
+  // the target answer when missed.
   words: string[];
   roundResults: RoundResult[];
   totalScore: number;
@@ -75,11 +78,11 @@ const AnagramsResultOverlay: React.FC<Props> = ({
   achievements = [],
   onDismissAchievement,
 }) => {
-  const { background } = useTheme();
+  const { background, colorBlindMode } = useTheme();
 
   const handleShare = async () => {
     try {
-      const text = shareText && shareText.length > 0 ? shareText : `Anagrams — Score ${totalScore}`;
+      const text = shareText && shareText.length > 0 ? shareText : `Anagrams, Score ${totalScore}`;
       await Share.share({ message: text });
     } catch (e) {
       console.warn('Share failed', e);
@@ -95,7 +98,7 @@ const AnagramsResultOverlay: React.FC<Props> = ({
 
   const title = perfectBonusApplied ? 'Perfect Run!' : allSolved ? 'Nice Work!' : 'Run Complete';
   const subtitle = perfectBonusApplied
-    ? `All ${roundResults.length} words, zero hints — flawless.`
+    ? `All ${roundResults.length} words, zero hints, flawless.`
     : `You solved ${wordsSolved}/${roundResults.length} words.`;
 
   const badge = [
@@ -117,26 +120,46 @@ const AnagramsResultOverlay: React.FC<Props> = ({
         { label: 'Rounds', value: `${roundsThisSession}` },
       ];
 
-  // The longest word actually solved, in the rack-tile treatment the
-  // migration doc specifies for Anagrams (44x50, not the 46x46 word tile
-  // Furdle/Word Grid use) -- called out on its own rather than repeating the
-  // full five-word tally the pills above already summarize.
-  const longestFind = roundResults.reduce<string | null>((best, r, i) => {
-    if (!r.solved || r.skipped) return best;
-    const w = words[i];
-    if (!w) return best;
-    return !best || w.length > best.length ? w : best;
-  }, null);
-
-  const signature = longestFind ? (
-    <Card padding={16} style={rackStyles.card}>
-      <Text style={[rackStyles.caption, { color: background.secondaryText }]}>LONGEST FIND</Text>
-      <View style={rackStyles.row}>
-        {longestFind.split('').map((ch, i) => (
-          <View key={i} style={rackStyles.tile}>
-            <Text style={rackStyles.tileText}>{ch.toUpperCase()}</Text>
-          </View>
-        ))}
+  // Every round's word in order. "Longest Find" used to sit here, but the
+  // round 5 word always has the most letters, so it only ever repeated the
+  // final word. The recap shows the whole run instead: solved words in the
+  // Anagrams accent, missed words grey with the answer, and an amber dot for
+  // a hint (the same yellow the share grid uses). Chips rather than 5 rows of
+  // letter tiles, which do not fit a 375x667 screen alongside the hero,
+  // pills and lifetime row. Solved chips are tinted, not filled, so this
+  // does not turn into a row of highlighted chips, and missed chips are
+  // dashed so the two read apart without colour.
+  const accent = accentForGame('anagrams', colorBlindMode);
+  const signature = roundResults.length > 0 ? (
+    <Card padding={16} style={recapStyles.card}>
+      <Text style={[recapStyles.caption, { color: background.secondaryText }]}>YOUR WORDS</Text>
+      <View style={recapStyles.chipWrap}>
+        {roundResults.map((r, i) => {
+          const word = (words[i] ?? '').toUpperCase();
+          const solved = r.solved && !r.skipped;
+          const hinted = r.hintsUsed > 0;
+          return (
+            <View
+              key={i}
+              style={[
+                recapStyles.chip,
+                solved
+                  ? { backgroundColor: withOpacity(accent, 0.14), borderColor: accent }
+                  : { borderColor: withOpacity(background.secondaryText, 0.6), borderStyle: 'dashed' },
+              ]}
+              accessible
+              accessibilityLabel={`Round ${i + 1}, ${word}, ${solved ? 'solved' : 'missed'}${hinted ? ', hint used' : ''}`}
+            >
+              <Text
+                style={[recapStyles.chipText, { color: solved ? background.textColor : background.secondaryText }]}
+                numberOfLines={1}
+              >
+                {word}
+              </Text>
+              {hinted && <View style={recapStyles.hintDot} />}
+            </View>
+          );
+        })}
       </View>
     </Card>
   ) : undefined;
@@ -202,21 +225,21 @@ const AnagramsResultOverlay: React.FC<Props> = ({
   );
 };
 
-const rackStyles = StyleSheet.create({
+const recapStyles = StyleSheet.create({
   card: { marginTop: 16, alignItems: 'center' },
   caption: { fontSize: 10, fontWeight: '800', letterSpacing: 2.2, textTransform: 'uppercase', marginBottom: 8 },
-  row: { flexDirection: 'row', gap: 6 },
-  tile: {
-    width: 44,
-    height: 50,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#22c55e',
-    backgroundColor: '#22c55e',
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6 },
+  // Same metrics as the shared Chip (radius 999, 5 / 11 padding, 12px / 800).
+  chip: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 999,
+    borderWidth: 1.5,
+    paddingVertical: 5,
+    paddingHorizontal: 11,
   },
-  tileText: { fontSize: 22, fontWeight: '900', color: '#ffffff' },
+  chipText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.6 },
+  hintDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#f59e0b', marginLeft: 5 },
 });
 
 export default AnagramsResultOverlay;

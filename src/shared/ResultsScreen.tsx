@@ -70,7 +70,7 @@ export type NewResultsScreenProps = BaseNewProps & CountdownOrPlayAgain;
 
 // Every color in the exact-values table comes from ThemeContext, but a few
 // need it at partial opacity, and BackgroundOption only stores solid hex.
-function withOpacity(hex: string, opacity: number): string {
+export function withOpacity(hex: string, opacity: number): string {
   const clean = hex.replace('#', '');
   const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
   const r = parseInt(full.slice(0, 2), 16);

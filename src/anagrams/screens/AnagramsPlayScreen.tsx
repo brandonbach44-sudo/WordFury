@@ -483,14 +483,15 @@ const AnagramsPlayScreen: React.FC<Props> = ({
   // Progress is autosaved on every round — leaving just freezes it in place.
 
   const isDaily = mode === 'daily';
-  // Show what the player actually typed — if they solved via an alternate valid
+  // Show what the player actually typed: if they solved via an alternate valid
   // anagram (e.g. "SHELF" when the target was "FLESH"), show their word so the
   // results recap isn't confusing. Fall back to the target word for skipped/
-  // unsolved rounds and for daily locked results (always show target there).
-  const displayWords = alreadyLocked && lockedResult
-    ? lockedResult.words
-    : puzzle.rounds.map((r, i) => roundResults[i]?.playerWord ?? r.word);
+  // unsolved rounds. A locked daily (View Results from the menu) reads the
+  // same playerWord from the saved round results, so it shows the same recap
+  // as the results screen did when the run finished.
   const displayResults = alreadyLocked && lockedResult ? lockedResult.roundResults : roundResults;
+  const targetWords = alreadyLocked && lockedResult ? lockedResult.words : puzzle.rounds.map((r) => r.word);
+  const displayWords = targetWords.map((w, i) => displayResults[i]?.playerWord ?? w);
 
   // Wordle-style emoji grid so the share is instantly recognizable at a
   // glance: 🟩 solved clean, 🟨 solved but needed a hint, ⬛ skipped/missed.
@@ -513,7 +514,7 @@ const AnagramsPlayScreen: React.FC<Props> = ({
     const emojiRow = displayResults.map(roundEmoji).join(' ');
 
     const lines: string[] = [];
-    lines.push(isDaily ? `ANAGRAMS DAILY — ${formatDisplayDate()}` : 'ANAGRAMS');
+    lines.push(isDaily ? `ANAGRAMS DAILY, ${formatDisplayDate()}` : 'ANAGRAMS');
     if (!isDaily) {
       lines.push(displayWords.map((w) => w.toUpperCase()).join(' · '));
     }

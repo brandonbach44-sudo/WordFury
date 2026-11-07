@@ -40,7 +40,7 @@ const CUBE_TIER_ACHIEVEMENTS: Achievement[] = EARNABLE_CUBE_TIERS.map((tierName)
   return {
     id: `ag_cube_${tierName}`,
     name: `${tier.displayName} Cube`,
-    description: `Unlock the ${tier.displayName} cube — ${tier.baseThreshold.toLocaleString()} Daily Anagrams lifetime score`,
+    description: `Unlock the ${tier.displayName} cube, ${tier.baseThreshold.toLocaleString()} Daily Anagrams lifetime score`,
     requirement: tier.baseThreshold,
     category: 'lifetime' as const,
   };

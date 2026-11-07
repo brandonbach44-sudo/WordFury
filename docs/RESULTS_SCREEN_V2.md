@@ -150,7 +150,7 @@ does not have. Nothing is reordered.
 | Furdle, solved | Streak | Guesses, Time, Best | the word in solved tiles |
 | Furdle, lost | none | Guesses, Time, Streak | the word in lost tiles, plus the near-miss line |
 | Hex Hive | Score | Words, Pangrams, Longest | six-hex rank ladder, distance to next rank |
-| Anagrams | Score | Solved, Missed, Time | the letter rack, longest find called out |
+| Anagrams | Score | Solved, Missed, Time | your words: all 5 in round order as chips, solved tinted in the accent, missed grey and dashed with the answer, a dot for a hint |
 | Word Ladder | vs Par | Steps, Par, Time | the chain, each rung with the letter changed |
 | Hangman | Streak | Misses, Lives left, Best | word tiles plus spent-miss marks |
 

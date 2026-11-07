@@ -44,7 +44,7 @@ export default function AnagramsCategoriesScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={[styles.subtitle, { color: background.secondaryText }]}>
-          Pick a category — same 5-word run, themed words
+          Pick a category, same 5-word run, themed words
         </Text>
 
         <View style={styles.grid}>
