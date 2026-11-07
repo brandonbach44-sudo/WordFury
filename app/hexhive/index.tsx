@@ -23,6 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Flame, Share2, Trophy } from 'lucide-react-native';
 
 import { useTheme } from '../../src/shared/ThemeContext';
+import { AchievementPopup } from '../../src/shared/AchievementPopup';
 import { FallingLetters } from '../../src/shared/FallingLetters';
 import {
   formatDisplayDate,
@@ -40,6 +41,7 @@ import {
 } from '../../src/hexhive/utils/storage';
 import {
   getUnlockedAchievements,
+  recheckQuickPlayScoreAchievements,
   HEXHIVE_ACHIEVEMENTS,
   type Achievement,
 } from '../../src/hexhive/utils/achievements';
@@ -122,7 +124,7 @@ function getAchievementProgress(id: string, stats: HexHiveStats): number | undef
     case 'hh_qp_score_50':
       return clamp(stats.practiceBestScore / 50);
     case 'hh_qp_score_100':
-      return clamp(stats.practiceBestScore / 100);
+      return clamp(stats.practiceBestScore / 75);
     case 'hh_qp_words_10':
       return clamp(stats.practiceBestWordCount / 10);
     case 'hh_qp_words_20':
@@ -282,6 +284,23 @@ export default function HexHiveEntryScreen() {
     loadAll();
   }, [loadAll]);
 
+  // Quick 100 was lowered to 75 in 1.0.1, so grant it to anyone whose saved
+  // best round already beats the new bar. Runs once on mount, not in loadAll,
+  // which fires twice on mount (here and on focus) and could race itself into
+  // showing the card twice.
+  const [pendingAchievements, setPendingAchievements] = useState<Achievement[]>([]);
+  useEffect(() => {
+    (async () => {
+      const s = await loadHexHiveStats().catch(() => null);
+      if (!s) return;
+      const newly = await recheckQuickPlayScoreAchievements(s).catch(() => []);
+      if (newly.length > 0) {
+        setPendingAchievements((prev) => [...prev, ...newly]);
+        getUnlockedAchievements().then(setUnlocked).catch(() => {});
+      }
+    })();
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       loadAll();
@@ -362,6 +381,13 @@ export default function HexHiveEntryScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: background.backgroundColor }]}>
       <StatusBar barStyle={background.statusBar === 'light' ? 'light-content' : 'dark-content'} />
       <FallingLetters />
+
+      <AchievementPopup
+        achievements={pendingAchievements}
+        onDismiss={() => setPendingAchievements([])}
+        backgroundColor={background.cardColor}
+        textColor={background.textColor}
+      />
 
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>

@@ -67,10 +67,18 @@ export const HEXHIVE_ACHIEVEMENTS: Achievement[] = [
   { id: 'hh_qp_rounds_10', name: 'Speed Runner', description: 'Play 10 Quick Play rounds', requirement: 10, category: 'practice' },
   { id: 'hh_qp_rounds_50', name: 'Blitz Regular', description: 'Play 50 Quick Play rounds', requirement: 50, category: 'practice' },
   { id: 'hh_qp_score_50', name: 'Quick 50', description: 'Score 50+ points in a single Quick Play round', requirement: 50, category: 'practice' },
-  { id: 'hh_qp_score_100', name: 'Quick 100', description: 'Score 100+ points in a single Quick Play round', requirement: 100, category: 'practice' },
+  // Keeps its original id and name so existing unlocks carry over; the bar was
+  // lowered to 75 because 100 in a 60 second round was out of reach.
+  { id: 'hh_qp_score_100', name: 'Quick 100', description: 'Score 75+ points in a single Quick Play round', requirement: 75, category: 'practice' },
   { id: 'hh_qp_words_10', name: 'Rapid Fire', description: 'Find 10+ words in a single Quick Play round', requirement: 10, category: 'practice' },
   { id: 'hh_qp_words_20', name: 'Lightning Round', description: 'Find 20+ words in a single Quick Play round', requirement: 20, category: 'practice' },
   { id: 'hh_qp_pangram', name: 'Speed Pangram', description: 'Find a pangram in Quick Play before time runs out', requirement: 1, category: 'practice' },
+];
+
+/** Single Quick Play round score thresholds. */
+const QP_SCORE_THRESHOLDS: [number, string][] = [
+  [50, 'hh_qp_score_50'],
+  [75, 'hh_qp_score_100'],
 ];
 
 async function loadUnlockedIds(): Promise<UnlockedAchievement[]> {
@@ -155,8 +163,9 @@ export async function checkWordAchievements(
   if (event.word.length >= 11) await tryUnlock('hh_long_word_11');
   if (event.word.length >= 13) await tryUnlock('hh_long_word_13');
 
-  if (stats.practiceBestScore >= 50) await tryUnlock('hh_qp_score_50');
-  if (stats.practiceBestScore >= 100) await tryUnlock('hh_qp_score_100');
+  for (const [threshold, id] of QP_SCORE_THRESHOLDS) {
+    if (stats.practiceBestScore >= threshold) await tryUnlock(id);
+  }
   if (stats.practiceBestWordCount >= 10) await tryUnlock('hh_qp_words_10');
   if (stats.practiceBestWordCount >= 20) await tryUnlock('hh_qp_words_20');
 
@@ -201,6 +210,26 @@ export async function checkProgressAchievements(
   if (stats.fullClears >= 10) await tryUnlock('hh_fullclears_10');
   if (stats.fullClears >= 25) await tryUnlock('hh_fullclears_25');
 
+  if (newlyUnlocked.length > 0) {
+    await saveUnlockedIds(existing);
+  }
+  return newlyUnlocked;
+}
+
+/**
+ * Grants any Quick Play score achievement the saved best round already earns.
+ * Quick 100 was lowered to 75, so a player whose best round beat 75 before the
+ * change gets it here, once: unlock skips anything already unlocked, so later
+ * calls return nothing and show no card.
+ */
+export async function recheckQuickPlayScoreAchievements(stats: HexHiveStats): Promise<Achievement[]> {
+  const existing = await loadUnlockedIds();
+  const newlyUnlocked: Achievement[] = [];
+  for (const [threshold, id] of QP_SCORE_THRESHOLDS) {
+    if (stats.practiceBestScore < threshold) continue;
+    const a = await unlock(id, existing);
+    if (a) newlyUnlocked.push(a);
+  }
   if (newlyUnlocked.length > 0) {
     await saveUnlockedIds(existing);
   }
