@@ -20,6 +20,10 @@ import {
   loadTiles,
   equipTile,
 } from '../utils/storage';
+import VariantGrid from '../../shared/VariantGrid';
+
+// 50 tile + 10 padding and 2 border on each side (styles.variantCard).
+const VARIANT_CARD_WIDTH = 74;
 
 interface CustomizeScreenProps {
   onBack: () => void;
@@ -285,12 +289,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({ onBack, embedd
             Select {isDefault ? 'Style' : 'Variant'}
           </Text>
           
-          <View onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.variantList}
-          >
+          <VariantGrid itemWidth={VARIANT_CARD_WIDTH} itemCount={maxVariant} style={styles.variantList}>
             {Array.from({ length: maxVariant }, (_, i) => i + 1).map((variant) => {
               const isUnlocked = variant <= status.highestVariant;
               const isSelected = selectedVariant === variant;
@@ -343,8 +342,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({ onBack, embedd
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
-          </View>
+          </VariantGrid>
 
           {/* Equip button */}
           <TouchableOpacity
@@ -700,8 +698,6 @@ const styles = StyleSheet.create({
   
   // Variant cards
   variantList: {
-    flexDirection: 'row',
-    gap: 12,
     paddingBottom: 5,
   },
   variantCard: {

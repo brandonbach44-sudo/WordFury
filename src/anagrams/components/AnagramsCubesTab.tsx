@@ -28,6 +28,10 @@ import {
   equipAnagramsTile,
 } from '../utils/anagramsStorage';
 import { useTheme } from '../../shared/ThemeContext';
+import VariantGrid from '../../shared/VariantGrid';
+
+// 48 tile + 10 padding and 2 border on each side (styles.variantCard).
+const VARIANT_CARD_WIDTH = 72;
 
 function formatNumber(num: number): string {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -241,54 +245,52 @@ export const AnagramsCubesTab: React.FC = () => {
             Select {isFree ? 'Style' : 'Variant'}
           </Text>
 
-          <View onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.variantList}>
-              {Array.from({ length: maxVariant }, (_, i) => i + 1).map((variant) => {
-                const isUnlocked = variant <= status.highestVariant;
-                const isSelected = selectedVariant === variant;
-                const isCurrentlyEquipped = isEquipped(selectedTier, variant);
-                return (
-                  <TouchableOpacity
-                    key={variant}
-                    style={[
-                      styles.variantCard,
-                      { backgroundColor: background.backgroundColor, borderColor: 'transparent' },
-                      isSelected && { borderColor: background.textColor },
-                      !isUnlocked && { opacity: 0.5 },
-                      isCurrentlyEquipped && { backgroundColor: 'rgba(34, 197, 94, 0.15)' },
-                    ]}
+          <VariantGrid itemWidth={VARIANT_CARD_WIDTH} itemCount={maxVariant} style={styles.variantList}>
+            {Array.from({ length: maxVariant }, (_, i) => i + 1).map((variant) => {
+              const isUnlocked = variant <= status.highestVariant;
+              const isSelected = selectedVariant === variant;
+              const isCurrentlyEquipped = isEquipped(selectedTier, variant);
+              return (
+                <TouchableOpacity
+                  key={variant}
+                  style={[
+                    styles.variantCard,
+                    { backgroundColor: background.backgroundColor, borderColor: 'transparent' },
+                    isSelected && { borderColor: background.textColor },
+                    !isUnlocked && { opacity: 0.5 },
+                    isCurrentlyEquipped && { backgroundColor: 'rgba(34, 197, 94, 0.15)' },
+                  ]}
+                  onPress={() => isUnlocked && setSelectedVariant(variant)}
+                  disabled={!isUnlocked}
+                >
+                  <GameTile
+                    letter="A"
+                    index={0}
+                    isSelected={false}
+                    selectionOrder={null}
                     onPress={() => isUnlocked && setSelectedVariant(variant)}
-                    disabled={!isUnlocked}
-                  >
-                    <GameTile
-                      letter="A"
-                      index={0}
-                      isSelected={false}
-                      selectionOrder={null}
-                      onPress={() => isUnlocked && setSelectedVariant(variant)}
-                      tileSize={48}
-                      tierName={selectedTier}
-                      variant={variant}
-                      appBg={background.backgroundColor}
-                    />
-                    <Text style={[styles.variantLabel, { color: isUnlocked ? background.textColor : background.secondaryText }]}>
-                      {isFree ? `Style ${variant}` : `V${variant}`}
-                    </Text>
-                    {!isUnlocked && (
-                      <View style={styles.lockOverlay}>
-                        <Lock size={18} color="#6b7280" />
-                      </View>
-                    )}
-                    {isCurrentlyEquipped && (
-                      <View style={styles.equippedCheckmark}>
-                        <Text style={styles.checkmark}>✓</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+                    tileSize={48}
+                    tierName={selectedTier}
+                    variant={variant}
+                    appBg={background.backgroundColor}
+                  />
+                  <Text style={[styles.variantLabel, { color: isUnlocked ? background.textColor : background.secondaryText }]}>
+                    {isFree ? `Style ${variant}` : `V${variant}`}
+                  </Text>
+                  {!isUnlocked && (
+                    <View style={styles.lockOverlay}>
+                      <Lock size={18} color="#6b7280" />
+                    </View>
+                  )}
+                  {isCurrentlyEquipped && (
+                    <View style={styles.equippedCheckmark}>
+                      <Text style={styles.checkmark}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </VariantGrid>
 
           <TouchableOpacity
             style={[
@@ -405,7 +407,7 @@ const styles = StyleSheet.create({
   v2UnlockedText: { color: '#22c55e', fontSize: 16, fontWeight: 'bold' },
 
   selectLabel: { fontSize: 14, marginBottom: 12 },
-  variantList: { flexDirection: 'row', gap: 12, paddingBottom: 5 },
+  variantList: { paddingBottom: 5 },
   variantCard: { alignItems: 'center', padding: 10, borderRadius: 12, position: 'relative', borderWidth: 2 },
   variantLabel: { fontSize: 12, marginTop: 6, fontWeight: '500' },
   lockOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },

@@ -54,8 +54,12 @@ import { LinearGradient } from "expo-linear-gradient";
 // AchievementPopup is the shared component in src/shared — uses compatible shape (category, name, description)
 import { SOLUTIONS, VALID_GUESSES } from "../data/wordle_words";
 import { PROFANITY_BLOCKLIST } from "../../shared/profanityBlocklist";
+import VariantGrid from "../../shared/VariantGrid";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+// 50 key + 10 padding and 2 border on each side (styles.variantCard).
+const VARIANT_CARD_WIDTH = 74;
 
 // Gem preview images for the skin picker (same assets as Word Builder)
 const GEM_PREVIEW_IMAGES: Partial<Record<string, any>> = {
@@ -2412,12 +2416,8 @@ export default function WordleGame() {
             {/* Select label */}
             <Text style={[styles.selectLabel, { color: SUBTEXT }]}>Select Style</Text>
 
-            {/* 6 variant cards */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.variantList}
-            >
+            {/* 7 variant cards */}
+            <VariantGrid itemWidth={VARIANT_CARD_WIDTH} itemCount={7} style={styles.variantList}>
               {[1, 2, 3, 4, 5, 6, 7].map((v) => {
                 const vs = DEFAULT_STYLES[v];
                 const isSelected = popupVariant === v;
@@ -2452,7 +2452,7 @@ export default function WordleGame() {
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </VariantGrid>
 
             {/* Equip button */}
             {(() => {
@@ -3339,8 +3339,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   variantList: {
-    flexDirection: 'row',
-    gap: 12,
     paddingBottom: 5,
   },
   variantCard: {
