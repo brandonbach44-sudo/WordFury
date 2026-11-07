@@ -67,9 +67,9 @@ export const HEXHIVE_ACHIEVEMENTS: Achievement[] = [
   { id: 'hh_qp_rounds_10', name: 'Speed Runner', description: 'Play 10 Quick Play rounds', requirement: 10, category: 'practice' },
   { id: 'hh_qp_rounds_50', name: 'Blitz Regular', description: 'Play 50 Quick Play rounds', requirement: 50, category: 'practice' },
   { id: 'hh_qp_score_50', name: 'Quick 50', description: 'Score 50+ points in a single Quick Play round', requirement: 50, category: 'practice' },
-  // Keeps its original id and name so existing unlocks carry over; the bar was
+  // Keeps its original id so existing unlocks carry over; the bar was
   // lowered to 75 because 100 in a 60 second round was out of reach.
-  { id: 'hh_qp_score_100', name: 'Quick 100', description: 'Score 75+ points in a single Quick Play round', requirement: 75, category: 'practice' },
+  { id: 'hh_qp_score_100', name: 'Quick 75', description: 'Score 75+ points in a single Quick Play round', requirement: 75, category: 'practice' },
   { id: 'hh_qp_words_10', name: 'Rapid Fire', description: 'Find 10+ words in a single Quick Play round', requirement: 10, category: 'practice' },
   { id: 'hh_qp_words_20', name: 'Lightning Round', description: 'Find 20+ words in a single Quick Play round', requirement: 20, category: 'practice' },
   { id: 'hh_qp_pangram', name: 'Speed Pangram', description: 'Find a pangram in Quick Play before time runs out', requirement: 1, category: 'practice' },
@@ -218,7 +218,7 @@ export async function checkProgressAchievements(
 
 /**
  * Grants any Quick Play score achievement the saved best round already earns.
- * Quick 100 was lowered to 75, so a player whose best round beat 75 before the
+ * Quick 75 (formerly Quick 100 at 100 points) was lowered, so a player whose best round beat 75 before the
  * change gets it here, once: unlock skips anything already unlocked, so later
  * calls return nothing and show no card.
  */

@@ -284,7 +284,7 @@ export default function HexHiveEntryScreen() {
     loadAll();
   }, [loadAll]);
 
-  // Quick 100 was lowered to 75 in 1.0.1, so grant it to anyone whose saved
+  // Quick 75 (formerly Quick 100) was lowered in 1.0.1, so grant it to anyone whose saved
   // best round already beats the new bar. Runs once on mount, not in loadAll,
   // which fires twice on mount (here and on focus) and could race itself into
   // showing the card twice.
