@@ -360,7 +360,7 @@ export default function AnagramsEntryScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.modeTitle, { color: background.textColor }]}>Categories</Text>
                 <Text style={[styles.modeDesc, { color: background.secondaryText }]}>
-                  Same 5-word run, themed words, Animals, Food, Countries & more
+                  Same 5-word run, themed words: Animals, Food, Countries & more
                 </Text>
               </View>
             </TouchableOpacity>
