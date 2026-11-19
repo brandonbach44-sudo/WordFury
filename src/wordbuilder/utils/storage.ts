@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TierName, TIERS, TIER_ORDER } from './tiers';
+import { startedAtFromTimeLeft } from '../../shared/dailyClock';
 
 const STATS_KEY = 'wordbuilder_stats';
 const TILES_KEY = 'wordbuilder_tiles';
@@ -395,21 +396,39 @@ export const saveDailyResult = async (
 
 const DAILY_PROGRESS_KEY = 'wordbuilder_daily_progress';
 
+// Length of the Wordsmith Daily round in seconds.
+export const WORDSMITH_DAILY_SECONDS = 60;
+
 export interface WordBuilderDailyProgress {
   dateISO: string; // YYYY-MM-DD — progress from a different day is stale/ignored
   letters: string[];
   foundWords: string[];
   score: number;
-  timeLeft: number;
+  // Epoch ms the round started. The Daily clock keeps running while the app
+  // is closed, so time left is always derived from this (src/shared/dailyClock).
+  startedAt: number;
 }
 
+/**
+ * Today's in-progress Daily, or null. A round whose time ran out while the
+ * player was away is still returned, so it can be ended with the words found.
+ */
 export const loadDailyBuilderProgress = async (): Promise<WordBuilderDailyProgress | null> => {
   try {
     const raw = await AsyncStorage.getItem(DAILY_PROGRESS_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || parsed.dateISO !== getTodayDateString()) return null;
-    return parsed;
+    if (typeof parsed.startedAt === 'number') return parsed;
+    // Saved by an older build that stored time left instead of a start time.
+    if (typeof parsed.timeLeft !== 'number') return null;
+    return {
+      dateISO: parsed.dateISO,
+      letters: parsed.letters ?? [],
+      foundWords: parsed.foundWords ?? [],
+      score: parsed.score ?? 0,
+      startedAt: startedAtFromTimeLeft(parsed.timeLeft, WORDSMITH_DAILY_SECONDS),
+    };
   } catch (error) {
     console.error('Error loading daily builder progress:', error);
     return null;

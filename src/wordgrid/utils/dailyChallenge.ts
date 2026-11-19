@@ -1,7 +1,11 @@
 // src/wordgrid/utils/dailyChallenge.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import { startedAtFromTimeLeft } from '../../shared/dailyClock';
 import { generateGrid } from './gridGenerator';
+
+// Length of a Word Grid round in seconds, Daily and Quick Play alike.
+export const WORDGRID_DAILY_SECONDS = 60;
 
 // ─── Date Helpers ─────────────────────────────────────────────────────────────
 
@@ -167,21 +171,32 @@ export interface WordGridDailyProgress {
   dateISO: string; // YYYY-MM-DD — progress from a different day is stale/ignored
   foundWords: { word: string; points: number }[];
   score: number;
-  timeLeft: number;
+  // Epoch ms the round started. The daily clock keeps running while the app
+  // is closed, so time left is always derived from this (src/shared/dailyClock).
+  startedAt: number;
 }
 
+/**
+ * Today's in-progress Daily, or null. A round whose time ran out while the
+ * player was away is still returned (its time left is 0), so the screen can
+ * end it with the words found before they left instead of discarding them.
+ */
 export async function loadWordGridDailyProgress(): Promise<WordGridDailyProgress | null> {
   try {
     const raw = await AsyncStorage.getItem(PROGRESS_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || parsed.dateISO !== getTodayDateString()) return null;
-    // An attempt whose clock already hit zero is not resumable — restoring it
-    // dropped the player straight into a "Time's Up! 0 words - 0 points"
-    // screen, which reads as the Daily result having been wiped. Same guard
-    // Quick Play already had; the asymmetry was the bug.
+    if (typeof parsed.startedAt === 'number') return parsed;
+    // Saved by an older build that stored time left. An attempt already at
+    // zero there is not resumable, same as before; anything else carries over.
     if (typeof parsed.timeLeft !== 'number' || parsed.timeLeft <= 0) return null;
-    return parsed;
+    return {
+      dateISO: parsed.dateISO,
+      foundWords: parsed.foundWords ?? [],
+      score: parsed.score ?? 0,
+      startedAt: startedAtFromTimeLeft(parsed.timeLeft, WORDGRID_DAILY_SECONDS),
+    };
   } catch {
     return null;
   }

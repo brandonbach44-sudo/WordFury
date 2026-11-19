@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AchievementIcon } from '../../src/shared/AchievementIcon';
 import {
   Alert,
+  AppState,
   Dimensions,
   PanResponder,
   Pressable,
@@ -32,6 +33,7 @@ import DailyCalendar, { type CalendarHistory } from '../../src/shared/DailyCalen
 // Shared Managers
 import { HapticManager } from '../../src/shared/HapticManager';
 import { recordRejectedWord } from '../../src/shared/wordReports';
+import { DAILY_CLOCK_NOTE, secondsLeft } from '../../src/shared/dailyClock';
 
 // Theme
 import { useTheme } from '../../src/shared/ThemeContext';
@@ -73,6 +75,7 @@ import {
   saveWordsmithDailyHistoryEntry,
   loadCachedDailyLetters,
   saveCachedDailyLetters,
+  WORDSMITH_DAILY_SECONDS,
 } from '../../src/wordbuilder/utils/storage';
 import { TierName } from '../../src/wordbuilder/utils/tiers';
 import {
@@ -398,6 +401,10 @@ export default function WordBuilder() {
   // tells startDailyChallenge to enter the already-loaded game instead of
   // wiping it with fresh letters/score/foundWords.
   const resumedDailyRef = useRef(false);
+  // Epoch ms the current Daily round started, or null outside the Daily.
+  // The Daily clock runs off this so it keeps going while the app is left;
+  // Blitz/Standard leave it null and keep their pausing countdown.
+  const dailyStartedAtRef = useRef<number | null>(null);
 
   // Player Data State
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
@@ -462,12 +469,21 @@ export default function WordBuilder() {
         // Stay on the menu screen — startDailyChallenge() picks this up when tapped.
         const savedProgress = await loadDailyBuilderProgress();
         if (savedProgress) {
+          const left = secondsLeft(savedProgress.startedAt, WORDSMITH_DAILY_SECONDS);
+          dailyStartedAtRef.current = savedProgress.startedAt;
           setLetters(savedProgress.letters);
           setFoundWords(savedProgress.foundWords);
           setScore(savedProgress.score);
-          setTimeLeft(savedProgress.timeLeft);
+          setTimeLeft(left);
           setLetterCount(6);
-          resumedDailyRef.current = true;
+          if (left <= 0) {
+            // Time ran out while the player was away: entering daily mode at
+            // zero lets the timer effect end the round with the words found
+            // before they left and save the Daily as usual.
+            setGameMode('daily');
+          } else {
+            resumedDailyRef.current = true;
+          }
         }
       }
     };
@@ -543,7 +559,21 @@ export default function WordBuilder() {
   // Timer effect
   useEffect(() => {
     if (timeLeft > 0 && !gameOver) {
-      timerRef.current = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      // Daily reads the wall clock, so time spent outside the app counts.
+      // Blitz/Standard count down a tick at a time, which pauses when left.
+      const startedAt = gameMode === 'daily' ? dailyStartedAtRef.current : null;
+      // The Daily tick lands just past the next whole second of the round, so
+      // every tick changes timeLeft and this effect keeps re-arming itself.
+      const delay = startedAt !== null
+        ? 1000 - (Math.max(0, Date.now() - startedAt) % 1000) + 20
+        : 1000;
+      timerRef.current = setTimeout(() => {
+        setTimeLeft(
+          startedAt !== null
+            ? secondsLeft(startedAt, WORDSMITH_DAILY_SECONDS)
+            : timeLeft - 1,
+        );
+      }, delay);
       
       // Timer warning at 10 seconds
       if (timeLeft === 10) {
@@ -643,22 +673,39 @@ export default function WordBuilder() {
   // being backgrounded, force-quit, or swiped away mid-game.
   useEffect(() => {
     if (gameMode !== 'daily' || gameOver) return;
+    const startedAt = dailyStartedAtRef.current;
+    if (startedAt === null) return;
     saveDailyBuilderProgress({
       dateISO: getTodayDateString(),
       letters,
       foundWords,
       score,
-      timeLeft,
+      startedAt,
     });
-  }, [gameMode, gameOver, letters, foundWords, score, timeLeft]);
+  }, [gameMode, gameOver, letters, foundWords, score]);
+
+  // Coming back to the app mid-Daily: resync the clock straight away. At zero
+  // the timer effect ends the round with the words already found.
+  useEffect(() => {
+    if (gameMode !== 'daily' || gameOver) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      const startedAt = dailyStartedAtRef.current;
+      if (state !== 'active' || startedAt === null) return;
+      setTimeLeft(secondsLeft(startedAt, WORDSMITH_DAILY_SECONDS));
+    });
+    return () => sub.remove();
+  }, [gameMode, gameOver]);
 
   const startDailyChallenge = async () => {
     const alreadyPlayed = await hasPlayedTodayDaily();
     if (alreadyPlayed) return;
 
     // Resuming an in-progress attempt restored on launch — letters/score/
-    // foundWords/timeLeft are already populated, just enter the game.
-    if (resumedDailyRef.current) {
+    // foundWords are already populated, just enter the game. The clock kept
+    // running while away; at zero the timer effect ends the round.
+    if (resumedDailyRef.current && dailyStartedAtRef.current !== null) {
+      resumedDailyRef.current = false;
+      setTimeLeft(secondsLeft(dailyStartedAtRef.current, WORDSMITH_DAILY_SECONDS));
       setGameMode('daily');
       setSelectedIndices([]);
       setCurrentWord('');
@@ -692,10 +739,12 @@ export default function WordBuilder() {
     setMessage('Tap letters to build words!');
     setGameOver(false);
     setPossibleWords([]);
-    setTimeLeft(60);
+    dailyStartedAtRef.current = Date.now();
+    setTimeLeft(WORDSMITH_DAILY_SECONDS);
   };
 
   const startPracticeGame = (mode: 'blitz' | 'standard', numLetters: number) => {
+    dailyStartedAtRef.current = null;
     setGameMode(mode);
     setLetterCount(numLetters);
     setLetters(generateLetters(numLetters));
@@ -1341,6 +1390,9 @@ export default function WordBuilder() {
                 <Text style={[styles.dailyButtonText, dynamicStyles.text]}>Play Today's Challenge</Text>
               </TouchableOpacity>
             )}
+            {!dailyPlayed && (
+              <Text style={[styles.dailyClockNote, dynamicStyles.textSecondary]}>{DAILY_CLOCK_NOTE}</Text>
+            )}
 
             {/* View Results + Share (when completed) */}
             {dailyPlayed && (
@@ -1861,6 +1913,11 @@ const styles = StyleSheet.create({
   dailyButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  dailyClockNote: {
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
   },
   dailyCompletedInfo: {
     alignItems: 'center',

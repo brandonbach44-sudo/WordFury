@@ -4,6 +4,7 @@ import { AchievementIcon } from '../../shared/AchievementIcon';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  AppState,
   Dimensions,
   PanResponder,
   Pressable,
@@ -31,6 +32,7 @@ import { DailyChallengeCard } from '../components/DailyChallengeCard';
 import DailyCalendar, { type CalendarHistory } from '../../shared/DailyCalendar';
 import { HapticManager } from '../../shared/HapticManager';
 import { recordRejectedWord } from '../../shared/wordReports';
+import { secondsLeft } from '../../shared/dailyClock';
 import { generateGrid } from '../utils/gridGenerator';
 import {
   buildWordGridDailyShareText,
@@ -49,6 +51,7 @@ import {
   type DailyWordGridStats,
   type WordGridDailyProgress,
   useCountdownToMidnight,
+  WORDGRID_DAILY_SECONDS,
 } from '../utils/dailyChallenge';
 import { validatePath, type Position } from '../utils/pathFinder';
 import { calculateWordScore, LONGEST_WORD_BONUS } from '../utils/scoring';
@@ -72,7 +75,7 @@ type Screen = 'menu' | 'game' | 'results';
 type GameMode = 'quick' | 'daily';
 type MenuTab = 'play' | 'stats';
 
-const ROUND_DURATION = 60;
+const ROUND_DURATION = WORDGRID_DAILY_SECONDS;
 
 type Feedback = { points: number; success: boolean; alreadyFound?: boolean; key: number };
 
@@ -264,6 +267,10 @@ export default function GameScreen() {
   const resumedDailyRef = useRef(false);
   // Set true when an in-progress Quick Play attempt was restored on app launch.
   const resumedQuickPlayRef = useRef(false);
+  // Epoch ms the current Daily round started, or null outside a Daily round.
+  // The Daily clock runs off this, so it keeps going while the app is left;
+  // Quick Play leaves it null and keeps its pausing countdown.
+  const dailyStartedAtRef = useRef<number | null>(null);
   // True when an in-progress Daily save exists for today — shows "Continue" button.
   const [dailyInProgressToday, setDailyInProgressToday] = useState(false);
 
@@ -288,13 +295,21 @@ export default function GameScreen() {
       if (cancelled) return;
 
       if (dailyProgress) {
-        setDailyInProgressToday(true);
+        const left = secondsLeft(dailyProgress.startedAt, ROUND_DURATION);
+        dailyStartedAtRef.current = dailyProgress.startedAt;
         setGameMode('daily');
         setGrid(generateDailyGrid());
         setScore(dailyProgress.score);
         setFoundWords(dailyProgress.foundWords);
         setFoundWordSet(new Set(dailyProgress.foundWords.map((w) => w.word)));
-        setTimeLeft(dailyProgress.timeLeft);
+        setTimeLeft(left);
+        if (left <= 0) {
+          // Time ran out while the player was away: end the round with the
+          // words found before they left and save the Daily as usual.
+          setGameOver(true);
+          return;
+        }
+        setDailyInProgressToday(true);
         resumedDailyRef.current = true;
         return;
       }
@@ -319,13 +334,15 @@ export default function GameScreen() {
   // being backgrounded, force-quit, or swiped away mid-game.
   useEffect(() => {
     if (gameMode !== 'daily' || gameOver || screen !== 'game') return;
+    const startedAt = dailyStartedAtRef.current;
+    if (startedAt === null) return;
     saveWordGridDailyProgress({
       dateISO: getTodayDateString(),
       foundWords,
       score,
-      timeLeft,
+      startedAt,
     });
-  }, [gameMode, gameOver, screen, foundWords, score, timeLeft]);
+  }, [gameMode, gameOver, screen, foundWords, score]);
 
   // Autosave Quick Play progress on every change.
   useEffect(() => {
@@ -337,16 +354,20 @@ export default function GameScreen() {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current!);
+        // Daily: read the wall clock, so time spent outside the app counts.
+        // Quick Play: count down one tick at a time, which pauses when left.
+        const startedAt = dailyStartedAtRef.current;
+        const next = startedAt !== null ? secondsLeft(startedAt, ROUND_DURATION) : prev - 1;
+        if (next <= 0) {
+          if (timerRef.current) clearInterval(timerRef.current);
           timerRef.current = null;
           setGameOver(true);
           HapticManager.wordGrid.roundOver();
           return 0;
         }
-        // Single warning at exactly 10s left, not a repeating countdown buzz.
-        if (prev - 1 === 10) HapticManager.wordGrid.timeRunningOut();
-        return prev - 1;
+        // Single warning on crossing 10s left, not a repeating countdown buzz.
+        if (prev > 10 && next <= 10) HapticManager.wordGrid.timeRunningOut();
+        return next;
       });
     }, 1000);
   }, []);
@@ -356,6 +377,24 @@ export default function GameScreen() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  // Coming back to the app mid-Daily: resync the clock straight away, and end
+  // the round if it ran out while the player was gone.
+  useEffect(() => {
+    if (screen !== 'game' || gameOver) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      const startedAt = dailyStartedAtRef.current;
+      if (state !== 'active' || startedAt === null) return;
+      const left = secondsLeft(startedAt, ROUND_DURATION);
+      setTimeLeft(left);
+      if (left <= 0) {
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = null;
+        setGameOver(true);
+      }
+    });
+    return () => sub.remove();
+  }, [screen, gameOver]);
 
   const handlePathComplete = useCallback(
     (path: Position[]) => {
@@ -472,6 +511,7 @@ export default function GameScreen() {
 
   const startGame = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    dailyStartedAtRef.current = null;
 
     // Resuming an in-progress Quick Play attempt restored on launch.
     if (resumedQuickPlayRef.current) {
@@ -502,15 +542,25 @@ export default function GameScreen() {
     if (timerRef.current) clearInterval(timerRef.current);
 
     // Resuming an in-progress attempt restored on launch — grid/score/
-    // foundWords/timeLeft are already populated, just enter the game.
-    if (resumedDailyRef.current) {
-      setGameOver(false);
+    // foundWords are already populated, just enter the game. The clock kept
+    // running while the player was away, so the round may already be over.
+    if (resumedDailyRef.current && dailyStartedAtRef.current !== null) {
+      resumedDailyRef.current = false;
+      setGameMode('daily');
+      const left = secondsLeft(dailyStartedAtRef.current, ROUND_DURATION);
+      setTimeLeft(left);
       setFeedbacks([]);
+      if (left <= 0) {
+        setGameOver(true);
+        return;
+      }
+      setGameOver(false);
       setScreen('game');
       setTimeout(startTimer, 100);
       return;
     }
 
+    dailyStartedAtRef.current = Date.now();
     setGameMode('daily');
     setGrid(generateDailyGrid());
     setScore(0);
@@ -531,6 +581,7 @@ export default function GameScreen() {
     // real Daily result with this throwaway one.
     setGameMode('quick');
     resumedQuickPlayRef.current = false;
+    dailyStartedAtRef.current = null;
     setGrid(generateGrid(4));
     setScore(0);
     setFoundWords([]);
@@ -587,14 +638,13 @@ export default function GameScreen() {
     }
   }, [foundWords, score, gameMode, dailyStats]);
 
-  // Daily is a single continuous attempt, but leaving mid-game (while the
-  // round is still running, not yet timed out) no longer locks in today's
-  // result as-is — score/foundWords/timeLeft are already autosaved above,
-  // so leaving just freezes the attempt where it stands. Coming back today
-  // resumes it via the restore effect above instead of forcing a finish
-  // just because you tapped away.
+  // Daily is a single continuous attempt. Leaving mid-game doesn't lock in
+  // the result: score/foundWords and the round's start time are autosaved
+  // above, and coming back today resumes it via the restore effect. The
+  // Daily clock keeps running while the player is away, though, so a round
+  // that ran out in the meantime ends on return with the words already found.
 
-  // Progress is autosaved continuously — leaving just freezes it in place.
+  // Quick Play progress is autosaved too, and its clock pauses while away.
   const handleGameplayBackPress = useCallback(() => {
     handleBackToMenu();
   }, [handleBackToMenu]);

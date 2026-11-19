@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { AchievementIcon } from '../shared/AchievementIcon';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -20,6 +20,7 @@ import { useTheme } from '../shared/ThemeContext';
 import { COLORS } from '../shared/theme';
 import { maybeRequestReview } from '../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../shared/dailyReminders';
+import { usePausingStopwatch } from '../shared/usePausingStopwatch';
 
 import { AchievementPopup } from '../shared/AchievementPopup';
 import { FallingLetters } from '../shared/FallingLetters';
@@ -301,6 +302,17 @@ export default function HangmanScreen() {
   // the app doesn't auto-jump into the game screen on launch.
   const resumedDailyProgressRef = useRef<HangmanDailyProgress | null>(null);
   const resumedPracticeProgressRef = useRef<HangmanPracticeProgress | null>(null);
+  // Snapshot of the live Daily, read by the stopwatch's pause callback so
+  // leaving the app saves the clock even between guesses.
+  const liveDailyProgressRef = useRef<Omit<HangmanDailyProgress, 'elapsedSeconds'> | null>(null);
+  // Count-up clock for the Daily. Breaks leaderboard ties between players
+  // with the same misses; it pauses while the app is left.
+  const dailyClock = usePausingStopwatch(
+    useCallback((seconds: number) => {
+      const live = liveDailyProgressRef.current;
+      if (live) saveDailyProgress({ ...live, elapsedSeconds: seconds });
+    }, []),
+  );
 
   const {
     word,
@@ -408,7 +420,9 @@ export default function HangmanScreen() {
       
       const handleDailyEnd = async () => {
         const result = isWon ? 'won' : 'lost';
-        await saveDailyResult(result, dailyWord, incorrectGuesses.length);
+        const elapsedSeconds = dailyClock.stop();
+        liveDailyProgressRef.current = null;
+        await saveDailyResult(result, dailyWord, incorrectGuesses.length, elapsedSeconds);
         await saveHangmanDailyHistoryEntry({
           dateISO: getTodayDateString(),
           result,
@@ -428,21 +442,32 @@ export default function HangmanScreen() {
 
       handleDailyEnd();
     }
-  }, [isWon, isLost, playingDaily, dailyGameEnded, dailyWord]);
+  }, [isWon, isLost, playingDaily, dailyGameEnded, dailyWord, dailyClock]);
 
   // Autosave Daily progress on every guess so the attempt survives the app
   // being backgrounded, force-quit, or swiped away mid-game.
   useEffect(() => {
     if (!playingDaily || !isPlaying) return;
-    saveDailyProgress({
+    const live = {
       dateISO: getTodayDateString(),
       word: dailyWord,
       category,
       guessedLetters: [...correctGuesses, ...incorrectGuesses],
       incorrectGuesses,
       correctGuesses,
-    });
-  }, [playingDaily, isPlaying, dailyWord, category, correctGuesses, incorrectGuesses]);
+    };
+    liveDailyProgressRef.current = live;
+    saveDailyProgress({ ...live, elapsedSeconds: dailyClock.read() });
+  }, [playingDaily, isPlaying, dailyWord, category, correctGuesses, incorrectGuesses, dailyClock]);
+
+  // Leaving the Hangman screen entirely mid-Daily: keep the clock's time so
+  // far, not just the time at the last guess.
+  useEffect(() => {
+    return () => {
+      const live = liveDailyProgressRef.current;
+      if (live) saveDailyProgress({ ...live, elapsedSeconds: dailyClock.stop() });
+    };
+  }, [dailyClock]);
 
   // Autosave practice progress on every guess.
   useEffect(() => {
@@ -499,6 +524,7 @@ export default function HangmanScreen() {
         incorrectGuesses: resumed.incorrectGuesses,
         correctGuesses: resumed.correctGuesses,
       });
+      dailyClock.start(resumed.elapsedSeconds ?? 0);
       setGameMode('playing');
       return;
     }
@@ -529,6 +555,7 @@ export default function HangmanScreen() {
     setShowDailyPopup(false);
     setSelectedCategory('Daily Challenge');
     startGameWithWord(dailyEntry.word, dailyEntry.category);
+    dailyClock.start(0);
     setGameMode('playing');
   };
 
@@ -555,14 +582,22 @@ export default function HangmanScreen() {
   // first so a same-session re-entry (tapping "Play Today's Challenge" again
   // right after leaving) resumes correctly too, not just a cross-launch one.
   const stashDailyProgressOnLeave = () => {
-    resumedDailyProgressRef.current = {
+    if (!playingDaily || !isPlaying) return;
+    // Leaving the game screen pauses the Daily clock too; it picks up from
+    // here when the player comes back today.
+    const elapsedSeconds = dailyClock.stop();
+    liveDailyProgressRef.current = null;
+    const progress: HangmanDailyProgress = {
       dateISO: getTodayDateString(),
       word: dailyWord,
       category,
       guessedLetters: [...correctGuesses, ...incorrectGuesses],
       incorrectGuesses,
       correctGuesses,
+      elapsedSeconds,
     };
+    resumedDailyProgressRef.current = progress;
+    saveDailyProgress(progress);
   };
 
   // Progress is autosaved on every guess; leaving just freezes it in place.
