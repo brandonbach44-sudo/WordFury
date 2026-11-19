@@ -23,6 +23,7 @@ import { WordReportPrompt } from '../../shared/WordReportPrompt';
 import { maybeRequestReview } from '../../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyReminders';
 import { createHexHiveSubmitter } from '../../shared/leaderboards/submit';
+import { DailyRankMark } from '../../shared/leaderboards/ui';
 import HexGrid, { type Feedback } from '../components/HexGrid';
 import WordList from '../components/WordList';
 import RankProgressBar from '../components/RankProgressBar';
@@ -656,6 +657,13 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
             subtitle={`${foundWords.length} word${foundWords.length !== 1 ? 's' : ''} \u00b7 ${score} points`}
             badge={[rank.name]}
             hero={{ label: 'Score', value: `${score}` }}
+            heroCorner={
+              <DailyRankMark
+                gameId="hexhive"
+                dateISO={dailyDateISO}
+                visible={mode === 'daily' && showWinCelebration}
+              />
+            }
             pills={pills}
             signature={renderRankLadder(rank, score)}
             lifetime={lifetime}

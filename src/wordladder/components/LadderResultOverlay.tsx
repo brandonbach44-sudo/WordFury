@@ -9,6 +9,7 @@ import { useTheme } from '../../shared/ThemeContext';
 import { AchievementPopup, AchievementLike } from '../../shared/AchievementPopup';
 import { WordReportPrompt } from '../../shared/WordReportPrompt';
 import { getGolfTerm } from '../utils/golfTerms';
+import { DailyRankMark } from '../../shared/leaderboards/ui';
 import { ResultsScreen, Card, type PillTriple, type LifetimeSpec } from '../../shared/ResultsScreen';
 
 export interface LadderLifetimeStats {
@@ -223,6 +224,7 @@ const LadderResultOverlay: React.FC<Props> = ({
       {isDaily ? (
         <ResultsScreen
           {...commonProps}
+          heroCorner={<DailyRankMark gameId="wordladder" visible={visible} />}
           countdown={
             nextDailySecondsRemaining != null
               ? { label: 'Next daily in', value: formatCountdown(nextDailySecondsRemaining) }

@@ -24,6 +24,7 @@ import { COLORS } from '../../shared/theme';
 import { maybeRequestReview } from '../../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyReminders';
 import { submitDaily } from '../../shared/leaderboards/submit';
+import { DailyRankMark } from '../../shared/leaderboards/ui';
 import { AchievementPopup } from '../../shared/AchievementPopup';
 import { WordReportPrompt } from '../../shared/WordReportPrompt';
 import { FallingLetters } from '../../shared/FallingLetters';
@@ -775,7 +776,11 @@ export default function GameScreen() {
     };
 
     return isDaily ? (
-      <ResultsScreen {...commonProps} countdown={{ label: 'Next daily in', value: dailyCountdown }} />
+      <ResultsScreen
+        {...commonProps}
+        heroCorner={<DailyRankMark gameId="wordgrid" visible />}
+        countdown={{ label: 'Next daily in', value: dailyCountdown }}
+      />
     ) : (
       <ResultsScreen {...commonProps} onPlayAgain={handlePlayAgain} />
     );

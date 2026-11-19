@@ -176,10 +176,32 @@ export function flushPending(): Promise<void> {
  * the finishing points, opts the player in to Game Center (never on a first
  * launch: only once a daily is done), queues the score and tries to send it.
  */
-export async function submitDaily<G extends GameId>(
+// Submissions still running. A results screen opens the moment a daily ends,
+// usually before its score is queued, so the rank mark waits for these.
+const inFlight = new Set<Promise<void>>();
+
+/** Resolves once every submitDaily started so far has finished. */
+export async function awaitSubmissions(): Promise<void> {
+  while (inFlight.size > 0) {
+    await Promise.all([...inFlight]);
+  }
+}
+
+export function submitDaily<G extends GameId>(
   gameId: G,
   result: DailyResults[G],
   puzzleDateISO: string = localDateISO(),
+): Promise<void> {
+  const run = submitDailyNow(gameId, result, puzzleDateISO);
+  inFlight.add(run);
+  run.finally(() => inFlight.delete(run));
+  return run;
+}
+
+async function submitDailyNow<G extends GameId>(
+  gameId: G,
+  result: DailyResults[G],
+  puzzleDateISO: string,
 ): Promise<void> {
   try {
     const board = boardFor(gameId);
@@ -210,6 +232,13 @@ export async function submitDaily<G extends GameId>(
   } catch (e) {
     console.warn('submitDaily failed', e);
   }
+}
+
+/** The queued (not yet posted) value for a game and date, if any. */
+export async function pendingValueFor(gameId: GameId, puzzleDateISO: string): Promise<number | null> {
+  const boardId = boardFor(gameId).boardId;
+  const item = (await loadPending()).find((p) => p.boardId === boardId && p.puzzleDateISO === puzzleDateISO);
+  return item ? item.value : null;
 }
 
 /** Where today's (or a given date's) score for a game stands. */

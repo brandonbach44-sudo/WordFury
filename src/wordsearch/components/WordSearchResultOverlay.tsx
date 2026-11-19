@@ -18,6 +18,7 @@ import { useSemanticColors } from '../../shared/semanticColors';
 import { AchievementPopup, AchievementLike } from '../../shared/AchievementPopup';
 import { ResultsScreen, type ChipSpec, type LifetimeSpec, type PillTriple } from '../../shared/ResultsScreen';
 import { DIRECTION_VECTORS, type PlacedWord } from '../utils/generator';
+import { DailyRankMark } from '../../shared/leaderboards/ui';
 import type { WordSearchStats } from '../utils/wsStorage';
 import type { WSAchievement } from '../utils/wsAchievements';
 
@@ -331,6 +332,7 @@ const WordSearchResultOverlay: React.FC<Props> = ({
       {isDaily ? (
         <ResultsScreen
           {...commonProps}
+          heroCorner={<DailyRankMark gameId="wordsearch" visible={visible} />}
           countdown={
             nextDailySecondsRemaining != null && nextDailySecondsRemaining > 0
               ? { label: 'Next daily in', value: formatCountdown(nextDailySecondsRemaining) }

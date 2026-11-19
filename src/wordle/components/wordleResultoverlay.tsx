@@ -5,6 +5,7 @@ import { useTheme } from "../../shared/ThemeContext";
 import { AchievementPopup, AchievementLike } from "../../shared/AchievementPopup";
 import { ResultsScreen, Card, WordTiles, Caption, type PillTriple, type LifetimeSpec } from "../../shared/ResultsScreen";
 import { WordReportPrompt } from "../../shared/WordReportPrompt";
+import { DailyRankMark } from "../../shared/leaderboards/ui";
 
 type CellState = "correct" | "present" | "absent" | "empty";
 
@@ -277,6 +278,7 @@ const WordleResultOverlay = ({
       {isDaily ? (
         <ResultsScreen
           {...commonProps}
+          heroCorner={<DailyRankMark gameId="furdle" visible={visible} />}
           countdown={
             nextDailySecondsRemaining != null
               ? { label: "Next daily in", value: formatCountdown(nextDailySecondsRemaining) }

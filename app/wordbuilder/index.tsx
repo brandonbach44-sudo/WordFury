@@ -35,6 +35,7 @@ import { HapticManager } from '../../src/shared/HapticManager';
 import { recordRejectedWord } from '../../src/shared/wordReports';
 import { DAILY_CLOCK_NOTE, secondsLeft } from '../../src/shared/dailyClock';
 import { submitDaily } from '../../src/shared/leaderboards/submit';
+import { DailyRankMark } from '../../src/shared/leaderboards/ui';
 
 // Theme
 import { useTheme } from '../../src/shared/ThemeContext';
@@ -1169,7 +1170,7 @@ export default function WordBuilder() {
     };
 
     return isDaily ? (
-      <ResultsScreen {...commonProps} />
+      <ResultsScreen {...commonProps} heroCorner={<DailyRankMark gameId="wordsmith" visible />} />
     ) : (
       <ResultsScreen {...commonProps} onPlayAgain={() => startPracticeGame(gameMode as 'blitz' | 'standard', letterCount)} />
     );
@@ -1806,6 +1807,7 @@ export default function WordBuilder() {
               ? `${viewStats.totalFound} of ${viewStats.totalPossible} words · ${dailyResultsView.score} points`
               : `${foundCount} word${foundCount === 1 ? '' : 's'} · ${dailyResultsView.score} points`}
             hero={{ label: 'Score', value: dailyResultsView.score.toLocaleString() }}
+            heroCorner={<DailyRankMark gameId="wordsmith" visible />}
             signature={renderWordsmithRing({
               found: viewStats ? viewStats.totalFound : foundCount,
               possible: viewStats ? viewStats.totalPossible : null,

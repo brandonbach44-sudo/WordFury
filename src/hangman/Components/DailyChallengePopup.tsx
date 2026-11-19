@@ -5,6 +5,7 @@ import { ResultsScreen, type PillTriple } from '../../shared/ResultsScreen';
 import { AchievementPopup, AchievementLike } from '../../shared/AchievementPopup';
 import { buildHangmanShareText, useCountdownToMidnight } from '../utils/dailyChallenge';
 import { HangmanSignature } from './HangmanSignature';
+import { DailyRankMark } from '../../shared/leaderboards/ui';
 
 type Props = {
   visible: boolean;
@@ -82,6 +83,7 @@ export const DailyChallengePopup: React.FC<Props> = ({
         subtitle={subtitle}
         badge={[category]}
         hero={{ label: 'Streak', value: `${streak}` }}
+        heroCorner={<DailyRankMark gameId="hangman" visible={visible} />}
         pills={pills}
         signature={<HangmanSignature word={word} solved={won} incorrectGuesses={incorrectCount} maxAttempts={maxAttempts} />}
         countdown={{ label: 'Next daily in', value: countdown }}
