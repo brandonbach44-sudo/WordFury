@@ -4,8 +4,8 @@
 // date. Always read fresh: the place is live and moves during the day, so a
 // rank is never cached.
 
-import { boardFor, type GameId } from './boards';
-import { diffDaysISO } from './dates';
+import { boardFor, WEEKLY_BOARD_ID, type GameId } from './boards';
+import { diffDaysISO, localDateISO, weekMondayISO } from './dates';
 import { loadLocalStanding, type BoardRow } from './entries';
 import { isSignedIn } from './gameCenter';
 import { currentOccurrenceDate } from './occurrence';
@@ -33,4 +33,19 @@ export async function loadDailyStanding(gameId: GameId, dateISO: string): Promis
   const standing = await loadLocalStanding(boardId, back);
   if (!standing.local) return { kind: 'none' };
   return { kind: 'posted', row: standing.local, totalPlayerCount: standing.totalPlayerCount };
+}
+
+/** The player's place on this week's Fury board, or null (signed out, not posted). */
+export async function loadWeeklyPlace(): Promise<number | null> {
+  if (!isSignedIn()) return null;
+  try {
+    const open = await currentOccurrenceDate(WEEKLY_BOARD_ID);
+    if (!open) return null;
+    const days = diffDaysISO(open, weekMondayISO(localDateISO()));
+    if (days < 0) return null;
+    const standing = await loadLocalStanding(WEEKLY_BOARD_ID, Math.floor(days / 7));
+    return standing.local?.place ?? null;
+  } catch {
+    return null;
+  }
 }

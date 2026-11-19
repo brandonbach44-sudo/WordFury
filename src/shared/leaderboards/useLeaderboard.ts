@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { boardCacheKey, getCachedBoard, setCachedBoard } from './boardCache';
-import { diffDaysISO, localDateISO } from './dates';
+import { addDaysISO, diffDaysISO, localDateISO, weekMondayISO } from './dates';
 import { loadBoard, type LoadedBoard } from './entries';
 import { useGameCenterState } from './gameCenter';
 import { currentOccurrenceDate } from './occurrence';
@@ -38,15 +38,16 @@ export async function occurrencesBackFor(boardId: string, dateISO: string): Prom
 
 /**
  * Loads `boardId` for the occurrence `daysBack` before the one holding the
- * player's local today (daily boards), or a fixed number of occurrences back
- * (`fixedBack`, used by the weekly board).
+ * player's local today (daily boards), or `weeksBack` weeks before the one
+ * holding this local week (the weekly board).
  */
 export function useLeaderboard(
   boardId: string,
   opts: {
     scope?: 'global' | 'friends';
     daysBack?: number;
-    fixedBack?: number;
+    /** Weekly board: 0 is this local week, 1 last week. */
+    weeksBack?: number;
     count?: number;
     enabled?: boolean;
   } = {},
@@ -56,7 +57,7 @@ export function useLeaderboard(
   const count = opts.count ?? 25;
   const enabled = opts.enabled ?? true;
   const daysBack = opts.daysBack ?? 0;
-  const fixedBack = opts.fixedBack;
+  const weeksBack = opts.weeksBack;
   const [status, setStatus] = useState<LeaderboardStatus>('loading');
   const [board, setBoard] = useState<LoadedBoard | null>(null);
   const [nonce, setNonce] = useState(0);
@@ -76,8 +77,13 @@ export function useLeaderboard(
     let cancelled = false;
     (async () => {
       try {
-        let back = fixedBack;
-        if (back === undefined) {
+        let back: number;
+        if (weeksBack !== undefined) {
+          const monday = addDaysISO(weekMondayISO(localDateISO()), -7 * weeksBack);
+          const days = await occurrencesBackFor(boardId, monday);
+          if (days === null) throw new Error('no occurrence');
+          back = Math.floor(days / 7);
+        } else {
           const fromToday = await occurrencesBackFor(boardId, localDateISO());
           if (fromToday === null) throw new Error('no occurrence');
           back = fromToday + daysBack;
@@ -104,7 +110,7 @@ export function useLeaderboard(
     return () => {
       cancelled = true;
     };
-  }, [boardId, scope, count, daysBack, fixedBack, enabled, gc.status, nonce]);
+  }, [boardId, scope, count, daysBack, weeksBack, enabled, gc.status, nonce]);
 
   return { status, board, reload };
 }
