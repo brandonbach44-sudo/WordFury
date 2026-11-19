@@ -91,3 +91,6 @@ expo-env.d.ts
 
 # macOS pem
 *.pem
+
+# Local planning docs, never committed (docs/ is public via GitHub Pages)
+planning/
