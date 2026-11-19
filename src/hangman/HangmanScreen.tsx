@@ -21,6 +21,7 @@ import { COLORS } from '../shared/theme';
 import { maybeRequestReview } from '../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../shared/dailyReminders';
 import { usePausingStopwatch } from '../shared/usePausingStopwatch';
+import { submitDaily } from '../shared/leaderboards/submit';
 
 import { AchievementPopup } from '../shared/AchievementPopup';
 import { FallingLetters } from '../shared/FallingLetters';
@@ -422,7 +423,14 @@ export default function HangmanScreen() {
         const result = isWon ? 'won' : 'lost';
         const elapsedSeconds = dailyClock.stop();
         liveDailyProgressRef.current = null;
-        await saveDailyResult(result, dailyWord, incorrectGuesses.length, elapsedSeconds);
+        const saved = await saveDailyResult(result, dailyWord, incorrectGuesses.length, elapsedSeconds);
+        if (saved.wrote) {
+          submitDaily('hangman', {
+            won: result === 'won',
+            misses: incorrectGuesses.length,
+            seconds: elapsedSeconds,
+          });
+        }
         await saveHangmanDailyHistoryEntry({
           dateISO: getTodayDateString(),
           result,

@@ -23,6 +23,7 @@ import { ResultsScreen, Card, WordTiles, type PillTriple, type LifetimeSpec } fr
 import { COLORS } from '../../shared/theme';
 import { maybeRequestReview } from '../../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyReminders';
+import { submitDaily } from '../../shared/leaderboards/submit';
 import { AchievementPopup } from '../../shared/AchievementPopup';
 import { WordReportPrompt } from '../../shared/WordReportPrompt';
 import { FallingLetters } from '../../shared/FallingLetters';
@@ -475,7 +476,12 @@ export default function GameScreen() {
       }
 
       if (gameMode === 'daily') {
+        // saveDailyWordGridResult keeps the first result of the day; only a
+        // run that actually became today's result goes to the leaderboard.
+        const alreadySaved =
+          (await loadDailyWordGridStats()).lastPlayedDate === getTodayDateString();
         const newDailyStats = await saveDailyWordGridResult(finalScore, finalFoundWords.length);
+        if (!alreadySaved) submitDaily('wordgrid', { score: finalScore });
         setDailyStats(newDailyStats);
         // Record the day for the Daily History calendar. Word Grid is a score
         // race with no win/lose state, so every completed day is 'played'.

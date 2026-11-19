@@ -41,6 +41,7 @@ import {
 import { useCountdownToMidnight, getTodayDateString } from '../../src/wordsearch/utils/storage';
 import { maybeRequestReview } from '../../src/shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../src/shared/dailyReminders';
+import { submitDaily } from '../shared/leaderboards/submit';
 import { AchievementPopup } from '../../src/shared/AchievementPopup';
 import WordSearchResultOverlay, { type WordSearchResultData } from '../../src/wordsearch/components/WordSearchResultOverlay';
 import { incrementWordSearchPracticeRoundsThisSession } from '../../src/wordsearch/utils/sessionStats';
@@ -628,6 +629,7 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
           multiplier,
           timeBonus,
         });
+        submitDaily('wordsearch', { foundCount: state.foundWords.length, score: finalScore });
         await saveWSDailyHistoryEntry({
           dateISO: getTodayDateString(),
           result: allWordsFound ? 'won' : 'played',

@@ -34,6 +34,7 @@ import DailyCalendar, { type CalendarHistory } from '../../src/shared/DailyCalen
 import { HapticManager } from '../../src/shared/HapticManager';
 import { recordRejectedWord } from '../../src/shared/wordReports';
 import { DAILY_CLOCK_NOTE, secondsLeft } from '../../src/shared/dailyClock';
+import { submitDaily } from '../../src/shared/leaderboards/submit';
 
 // Theme
 import { useTheme } from '../../src/shared/ThemeContext';
@@ -612,6 +613,7 @@ export default function WordBuilder() {
           resumedDailyRef.current = false;
           await clearDailyBuilderProgress();
           if (saveResult.wrote) {
+            submitDaily('wordsmith', { score: updatedDaily.lastDailyScore });
             await saveWordsmithDailyHistoryEntry({
               dateISO: getTodayDateString(),
               result: 'played',
@@ -861,6 +863,7 @@ export default function WordBuilder() {
       // Same reasoning as the time-up handler: only ever set state from what
       // saveDailyResult actually stored, never from the live score/foundWords.
       const saveResult = await saveDailyResult(score, foundWords);
+      if (saveResult.wrote) submitDaily('wordsmith', { score: saveResult.daily.lastDailyScore });
       setDailyChallenge(saveResult.daily);
       setDailyPlayed(true);
       setDailyResult({ score: saveResult.daily.lastDailyScore, words: saveResult.daily.lastDailyWords });

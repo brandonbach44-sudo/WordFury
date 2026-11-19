@@ -10,6 +10,7 @@ import { syncDailyReminder } from '../src/shared/dailyReminders';
 import { HapticManager } from '../src/shared/HapticManager';
 import { MotionPreference } from '../src/shared/motionPreference';
 import { initGameCenterAtLaunch } from '../src/shared/leaderboards/gameCenter';
+import { installLeaderboardSync, syncLeaderboards } from '../src/shared/leaderboards/lifecycle';
 
 // Pre-warm the large shared word list (~41k entries) at app startup. Without
 // this, the first navigation to Word Ladder or Anagrams triggers construction
@@ -91,6 +92,7 @@ export default function RootLayout() {
     // Game Center sign-in, only for a player who has opted in before (a
     // finished daily or a tap on a leaderboard card). Never on a first
     // launch, and never awaited, so launch is never blocked on it.
+    installLeaderboardSync();
     initGameCenterAtLaunch();
 
     // Pre-warm Word Ladder word buckets 2 seconds after the home screen
@@ -141,6 +143,8 @@ export default function RootLayout() {
     const appStateSubscription = AppState.addEventListener('change', (nextState) => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
         syncDailyReminder();
+        // Send any queued scores, collect settled bonuses, post the weekly total.
+        syncLeaderboards();
       }
       appState.current = nextState;
     });
