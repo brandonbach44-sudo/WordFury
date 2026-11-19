@@ -97,7 +97,10 @@ export function useLeaderboard(
         }
         const key = boardCacheKey(boardId, scope, back, count);
         const cached = nonce === 0 ? getCachedBoard(key) : null;
-        if (!cached && !cancelled) setStatus('loading');
+        if (!cached && !cancelled) {
+          setStatus('loading');
+          setBoard(null);
+        }
         const data = cached ?? (await loadBoard(boardId, { scope, occurrencesBack: back, count }));
         if (!cached) setCachedBoard(key, data);
         if (cancelled) return;
