@@ -45,6 +45,7 @@
       ],
       "expo-font",
       "expo-web-browser",
+      "./modules/game-center/app.plugin.js",
       [
         "expo-notifications",
         {

@@ -9,6 +9,7 @@ import { ThemeProvider } from '../src/shared/ThemeContext';
 import { syncDailyReminder } from '../src/shared/dailyReminders';
 import { HapticManager } from '../src/shared/HapticManager';
 import { MotionPreference } from '../src/shared/motionPreference';
+import { initGameCenterAtLaunch } from '../src/shared/leaderboards/gameCenter';
 
 // Pre-warm the large shared word list (~41k entries) at app startup. Without
 // this, the first navigation to Word Ladder or Anagrams triggers construction
@@ -86,6 +87,11 @@ export default function RootLayout() {
     // Same reasoning as above: load the background motion preference once,
     // at startup, so every screen that renders FallingLetters sees it.
     MotionPreference.init();
+
+    // Game Center sign-in, only for a player who has opted in before (a
+    // finished daily or a tap on a leaderboard card). Never on a first
+    // launch, and never awaited, so launch is never blocked on it.
+    initGameCenterAtLaunch();
 
     // Pre-warm Word Ladder word buckets 2 seconds after the home screen
     // appears, while the player is still reading the menu. Wrapped in
