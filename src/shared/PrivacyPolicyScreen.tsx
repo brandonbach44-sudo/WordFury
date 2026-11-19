@@ -15,7 +15,7 @@ type Section = {
 const SECTIONS: Section[] = [
   {
     heading: 'Summary',
-    body: 'Word Fury is a word game app. It works entirely on your device. We do not collect, store, transmit, or sell any personal data, and we do not use analytics, advertising, or tracking software of any kind. There is no account to create and no data leaves your phone unless you choose to send it to us yourself (see "Feedback" below).',
+    body: 'Word Fury is a word game app. It works entirely on your device. We do not collect, store, transmit, or sell any personal data, and we do not use analytics, advertising, or tracking software of any kind. There is no account to create, and no data leaves your phone unless you choose to send it yourself: feedback you send us (see "Feedback" below), or scores you post to Game Center leaderboards (see "Leaderboards" below).',
   },
   {
     heading: 'What the app stores, and where',
@@ -29,10 +29,10 @@ const SECTIONS: Section[] = [
   {
     heading: "What we don't do",
     bullets: [
-      'No account creation, sign-in, or login of any kind',
+      'No Word Fury account, sign-in, or login (Game Center sign-in belongs to Apple and is optional)',
       'No analytics or usage tracking',
       'No advertising or ad networks',
-      'No third-party SDKs that collect data',
+      'No third-party SDKs that collect data (Game Center, used for the optional leaderboards, is part of iOS)',
       'No cookies',
       'No location data',
       'No access to contacts, photos, camera, or microphone',
@@ -42,6 +42,10 @@ const SECTIONS: Section[] = [
   {
     heading: 'Feedback',
     body: 'If you use the in-app "Send Feedback" option, the rating, category, and message you write are sent directly to us through a form service (Formspree) so we can read and respond to it. No other data leaves your device as part of this: no device identifiers, no diagnostics, no location. We use this information solely to read and respond to your feedback, and we don\'t share it with anyone else.',
+  },
+  {
+    heading: 'Leaderboards',
+    body: "Word Fury's leaderboards use Apple Game Center. If you're signed in to Game Center, your daily results and weekly Fury points are sent to Apple, and other players can see them next to your Game Center nickname. If you allow it, Word Fury also shows where your Game Center friends place. Word Fury doesn't store your scores or nickname on servers of its own; Apple handles them under Apple's privacy policy. If you're not signed in to Game Center, nothing is sent and every game works the same.",
   },
   {
     heading: "Children's privacy",
@@ -76,7 +80,7 @@ export const PrivacyPolicyScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.updated, { color: background.secondaryText }]}>
-          Last updated: August 9, 2026
+          Last updated: November 18, 2026
         </Text>
 
         <View style={styles.pill}>

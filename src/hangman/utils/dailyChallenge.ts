@@ -151,6 +151,9 @@ export interface DailyChallengeStats {
   bestStreak: number;
   gamesPlayed: number;
   dailyWins: number;
+  // Seconds the last Daily took, counted only while the app was open.
+  // Breaks ties on the leaderboard between players with the same misses.
+  lastElapsedSeconds: number;
 }
 
 const STORAGE_KEY = 'hangman_daily_challenge_stats';
@@ -163,6 +166,7 @@ const defaultStats: DailyChallengeStats = {
   bestStreak: 0,
   gamesPlayed: 0,
   dailyWins: 0,
+  lastElapsedSeconds: 0,
 };
 
 export async function loadDailyStats(): Promise<DailyChallengeStats> {
@@ -176,11 +180,20 @@ export async function loadDailyStats(): Promise<DailyChallengeStats> {
 export async function saveDailyStats(s: DailyChallengeStats) {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(s));
 }
-export async function saveDailyResult(result: 'won' | 'lost', word: string, incorrectCount: number = 0) {
+/**
+ * Records today's Daily. First result wins: `wrote` is false when today was
+ * already saved, so callers know not to treat this run as the real one.
+ */
+export async function saveDailyResult(
+  result: 'won' | 'lost',
+  word: string,
+  incorrectCount: number = 0,
+  elapsedSeconds: number = 0,
+): Promise<{ stats: DailyChallengeStats; wrote: boolean }> {
   const stats = await loadDailyStats();
   const today = getTodayDateString();
   const yesterday = getYesterdayDateString();
-  if (stats.lastPlayedDate === today) return stats;
+  if (stats.lastPlayedDate === today) return { stats, wrote: false };
 
   let streak = (stats.lastPlayedDate === yesterday && stats.lastDailyResult !== '') ? (result === 'won' ? stats.streak + 1 : 0) : (result === 'won' ? 1 : 0);
   let bestStreak = Math.max(streak, stats.bestStreak);
@@ -194,9 +207,10 @@ export async function saveDailyResult(result: 'won' | 'lost', word: string, inco
     bestStreak,
     gamesPlayed: stats.gamesPlayed + 1,
     dailyWins: (stats.dailyWins || 0) + (result === 'won' ? 1 : 0),
+    lastElapsedSeconds: Math.max(0, Math.round(elapsedSeconds)),
   };
   await saveDailyStats(newStats);
-  return newStats;
+  return { stats: newStats, wrote: true };
 }
 
 export async function hasPlayedTodayDaily(): Promise<boolean> {
@@ -218,6 +232,9 @@ export interface HangmanDailyProgress {
   guessedLetters: string[];
   incorrectGuesses: string[];
   correctGuesses: string[];
+  // Seconds on the Daily's count-up clock so far. The clock pauses while the
+  // app is left, like Furdle's. Missing in progress saved by older builds.
+  elapsedSeconds?: number;
 }
 
 export async function loadDailyProgress(): Promise<HangmanDailyProgress | null> {

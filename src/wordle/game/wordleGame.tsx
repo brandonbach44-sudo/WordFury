@@ -49,6 +49,8 @@ import { FallingLetters } from "../../shared/FallingLetters";
 import DailyCalendar, { type CalendarHistory } from "../../shared/DailyCalendar";
 import { maybeRequestReview } from "../../shared/reviewPrompt";
 import { syncDailyReminder, maybeFlagReminderOptIn } from "../../shared/dailyReminders";
+import { submitDaily } from "../../shared/leaderboards/submit";
+import { TodayLeaderboardCard } from "../../shared/leaderboards/TodayLeaderboardCard";
 import { KEY_SKIN_ORDER, KEY_SKINS, isKeySkinUnlocked, type KeySkinName } from "../utils/keySkins";
 import { LinearGradient } from "expo-linear-gradient";
 // AchievementPopup is the shared component in src/shared — uses compatible shape (category, name, description)
@@ -1305,6 +1307,11 @@ export default function WordleGame() {
         resumedDailyRef.current = false;
         try {
           await saveDailyLock(lock);
+          submitDaily(
+            'furdle',
+            { won: result === 'won', guesses: guessesUsed, seconds: elapsedSeconds },
+            lock.dateISO,
+          );
           await clearDailyProgress();
           await saveWordleDailyHistoryEntry({
             dateISO: lock.dateISO,
@@ -1942,6 +1949,9 @@ export default function WordleGame() {
                     </View>
                   )}
                 </View>
+
+                {/* Quick Play below adds its own 18pt top margin. */}
+                <TodayLeaderboardCard gameId="furdle" style={{ marginBottom: 6 }} />
 
                 {/* Play */}
                 <Pressable

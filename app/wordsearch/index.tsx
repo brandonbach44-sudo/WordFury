@@ -24,6 +24,8 @@ import { useTheme } from '../../src/shared/ThemeContext';
 import { FallingLetters } from '../../src/shared/FallingLetters';
 import DailyCalendar, { type CalendarHistory } from '../../src/shared/DailyCalendar';
 import { COLORS } from '../../src/shared/theme';
+import { DAILY_CLOCK_NOTE } from '../../src/shared/dailyClock';
+import { TodayLeaderboardCard } from '../../src/shared/leaderboards/TodayLeaderboardCard';
 import {
   formatDisplayDate,
   getTodayDateString,
@@ -292,6 +294,9 @@ const WordSearchEntryScreen: React.FC = () => {
                   <Text style={[styles.dailyButtonText, { color: background.textColor }]}>{dailyInProgress ? "Continue Today's Challenge" : "Play Today's Challenge"}</Text>
                 </TouchableOpacity>
               )}
+              {!dailyPlayed && (
+                <Text style={[styles.dailyClockNote, { color: background.secondaryText }]}>{DAILY_CLOCK_NOTE}</Text>
+              )}
 
               {/* View Results + Share — played */}
               {dailyPlayed && (
@@ -321,6 +326,8 @@ const WordSearchEntryScreen: React.FC = () => {
                 </View>
               )}
             </View>
+
+            <TodayLeaderboardCard gameId="wordsearch" />
 
             {/* Quick Play Card */}
             <TouchableOpacity
@@ -524,6 +531,7 @@ const styles = StyleSheet.create({
   dailyStatPillValue: { fontSize: 18, fontWeight: '600', color: '#2c2416', textAlign: 'center' },
   dailyButton: { borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   dailyButtonText: { fontSize: 16, fontWeight: '600' },
+  dailyClockNote: { fontSize: 12, marginTop: 8, textAlign: 'center' },
   dailyActionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   dailyActionButton: { flex: 1, borderRadius: 12, paddingVertical: 10, alignItems: 'center' },
   dailyActionText: { fontSize: 14, fontWeight: '600' },

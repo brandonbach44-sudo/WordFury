@@ -24,6 +24,10 @@ import { HapticManager } from '../src/shared/HapticManager';
 import { ShieldCheck } from 'lucide-react-native';
 import { WordReportPrompt } from '../src/shared/WordReportPrompt';
 import { useCountdownToMidnight } from '../src/wordladder/utils/ladderStorage';
+import { useGameCenterState } from '../src/shared/leaderboards/gameCenter';
+import { syncLeaderboards } from '../src/shared/leaderboards/lifecycle';
+import { takeRecap } from '../src/shared/leaderboards/recap';
+import { loadWeeklyPlace } from '../src/shared/leaderboards/standing';
 
 const GAMES = [
   {
@@ -166,6 +170,35 @@ export default function Home() {
   const [scrollAreaHeight, setScrollAreaHeight] = useState(0);
   const [ritual, setRitual] = useState<DailyRitualSummary | null>(null);
   const resetsIn = useCountdownToMidnight();
+
+  // ── Leaderboards ──────────────────────────────────────────────────────────
+  // The weekly Fury place sits as a small plaque beside the streak, and the
+  // morning recap floats over the grid as a toast, so neither moves the game
+  // grid. Both stay hidden for signed-out players.
+  const gameCenter = useGameCenterState();
+  const [weeklyPlace, setWeeklyPlace] = useState<number | null>(null);
+  const [recap, setRecap] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (gameCenter.status !== 'signedIn') {
+        setWeeklyPlace(null);
+        return;
+      }
+      let cancelled = false;
+      (async () => {
+        // Settles yesterday's bonuses (feeding the recap) and posts the week.
+        await syncLeaderboards();
+        const [place, recapText] = await Promise.all([loadWeeklyPlace(), takeRecap()]);
+        if (cancelled) return;
+        setWeeklyPlace(place);
+        if (recapText) setRecap(recapText);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [gameCenter.status])
+  );
 
   // ── One dialog at a time, queued ──────────────────────────────────────────
   // This screen can want to say several things at once: a Perfect Day landed,
@@ -439,7 +472,7 @@ export default function Home() {
                   </Text>
                 </View>
 
-                <View style={styles.todayStreakWrap}>
+                <View style={[styles.todayStreakWrap, weeklyPlace !== null && styles.todayStreakWrapWithPlaque]}>
                   <View style={styles.todayStreakRow}>
                     {/* Skips are a CROSS-GAME resource, so they're shown on the
                         cross-game surface and nowhere else. A count on an
@@ -466,6 +499,25 @@ export default function Home() {
                     Fury Streak ›
                   </Text>
                 </View>
+
+                {/* Weekly Fury place. Sized to the fraction block on the left,
+                    so the card gains no height. */}
+                {weeklyPlace !== null && (
+                  <View
+                    style={[styles.weekPlaque, { borderColor: background.textColor }]}
+                    accessibilityLabel={`Place ${weeklyPlace} this week`}
+                  >
+                    <Text
+                      style={[styles.weekPlaqueNum, { color: background.textColor }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.6}
+                    >
+                      #{weeklyPlace}
+                    </Text>
+                    <Text style={[styles.weekPlaqueLabel, { color: background.secondaryText }]}>WEEK</Text>
+                  </View>
+                )}
               </View>
 
               {/* One segment per game, lit as each daily is cleared. */}
@@ -595,6 +647,33 @@ export default function Home() {
         </ScrollView>
       </SafeAreaView>
 
+      {/* ── MORNING RECAP ────────────────────────────────────────────────────
+          Yesterday's placement bonuses, once a day, floating over the grid so
+          nothing moves. Not a Modal, so it can't collide with the dialog. */}
+      {recap && (
+        <View
+          style={[styles.recapToast, { backgroundColor: background.textColor }]}
+          accessibilityLiveRegion="polite"
+        >
+          <View style={styles.recapBody}>
+            <Text style={[styles.recapLead, { color: background.backgroundColor }]}>
+              {recap.split(': ')[0].toUpperCase()}
+            </Text>
+            <Text style={[styles.recapText, { color: background.backgroundColor }]}>
+              {recap.split(': ').slice(1).join(': ')}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => setRecap(null)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss"
+          >
+            <Ionicons name="close" size={18} color={background.backgroundColor} style={styles.recapClose} />
+          </Pressable>
+        </View>
+      )}
+
       {/* ── THE ONE DIALOG ───────────────────────────────────────────────────
           Every message this screen can raise — Perfect Day, a Streak Skip
           offer, the relief after spending one, the first-skip explainer, the
@@ -681,6 +760,9 @@ const styles = StyleSheet.create({
   todayFractionTotal: { fontSize: 18, fontWeight: '800' },
   todayLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginTop: 2 },
   todayStreakWrap: { alignItems: 'flex-end' },
+  // Keeps the streak on the right, next to the weekly plaque, instead of
+  // space-between pushing it to the middle.
+  todayStreakWrapWithPlaque: { marginLeft: 'auto' },
   todayStreakRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   todayStreakValue: { fontSize: 22, fontWeight: '900' },
   todaySkipBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, marginRight: 8 },
@@ -688,6 +770,42 @@ const styles = StyleSheet.create({
   todaySegments: { flexDirection: 'row', gap: 4, marginTop: 12 },
   todaySegment: { flex: 1, height: 6, borderRadius: 3 },
   todayReset: { fontSize: 11, fontWeight: '600', marginTop: 8, textAlign: 'center' },
+  // Weekly Fury place: no taller than the fraction block beside it.
+  weekPlaque: {
+    width: 46,
+    height: 46,
+    borderRadius: 13,
+    borderWidth: 2,
+    marginLeft: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  weekPlaqueNum: { fontSize: 16, fontWeight: '900', lineHeight: 18 },
+  weekPlaqueLabel: { fontSize: 8, fontWeight: '800', letterSpacing: 0.8, marginTop: 2 },
+
+  // ── Morning recap toast ───────────────────────────────────────────────────
+  recapToast: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: 40,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    shadowColor: '#000000',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  recapBody: { flex: 1, minWidth: 0 },
+  recapLead: { fontSize: 10, fontWeight: '800', letterSpacing: 1.6, opacity: 0.7, marginBottom: 2 },
+  recapText: { fontSize: 13, fontWeight: '700', lineHeight: 18 },
+  recapClose: { opacity: 0.7 },
   // Mirrors settingsButton on the right so the header stays balanced and gains
   // no height.
   historyButton: { width: 38, alignItems: 'flex-start', justifyContent: 'center' },

@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Flame, Share2, Trophy } from 'lucide-react-native';
 
 import { useTheme } from '../../src/shared/ThemeContext';
+import { TodayLeaderboardCard } from '../../src/shared/leaderboards/TodayLeaderboardCard';
 import { FallingLetters } from '../../src/shared/FallingLetters';
 import { COLORS } from '../../src/shared/theme';
 import {
@@ -334,6 +335,8 @@ export default function AnagramsEntryScreen() {
                 </View>
               )}
             </View>
+
+            <TodayLeaderboardCard gameId="anagrams" />
 
             {/* Quick Play */}
             <Text style={[styles.sectionLabel, { color: background.textColor }]}>Quick Play</Text>

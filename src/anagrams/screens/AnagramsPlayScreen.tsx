@@ -29,6 +29,7 @@ import { ConfirmModal } from '../../shared/ConfirmModal';
 import { GameTile } from '../../shared/GameTile';
 import { maybeRequestReview } from '../../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyReminders';
+import { submitDaily } from '../../shared/leaderboards/submit';
 import type { TierName } from '../../shared/tileTiers';
 
 import type { AnagramPuzzle } from '../utils/generator';
@@ -420,6 +421,7 @@ const AnagramsPlayScreen: React.FC<Props> = ({
         perfectBonusApplied,
         timeSeconds: finalElapsed,
       });
+      submitDaily('anagrams', { score: total });
       await saveAnagramsDailyHistoryEntry({
         dateISO: getTodayDateString(),
         result: won ? 'won' : 'played',

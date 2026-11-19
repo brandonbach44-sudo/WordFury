@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  AppState,
   Dimensions,
   PanResponder,
   ScrollView,
@@ -17,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/shared/ThemeContext';
 import { HapticManager } from '../shared/HapticManager';
 import { useSemanticColors } from '../shared/semanticColors';
+import { secondsLeft } from '../shared/dailyClock';
 import { WORD_SEARCH_THEMES, type WordSearchThemeId } from '../../src/wordsearch/data/themes';
 import type { PlacedWord, WordSearchPuzzle } from '../../src/wordsearch/utils/generator';
 import { DIFFICULTY_CONFIG } from '../../src/wordsearch/utils/difficultyConfig';
@@ -39,6 +41,7 @@ import {
 import { useCountdownToMidnight, getTodayDateString } from '../../src/wordsearch/utils/storage';
 import { maybeRequestReview } from '../../src/shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../src/shared/dailyReminders';
+import { submitDaily } from '../shared/leaderboards/submit';
 import { AchievementPopup } from '../../src/shared/AchievementPopup';
 import WordSearchResultOverlay, { type WordSearchResultData } from '../../src/wordsearch/components/WordSearchResultOverlay';
 import { incrementWordSearchPracticeRoundsThisSession } from '../../src/wordsearch/utils/sessionStats';
@@ -236,6 +239,17 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
   // as before rather than bouncing back to the menu.
   const [boardRevealed, setBoardRevealed] = useState(!alreadyLocked);
 
+  // The Daily clock keeps running while the app is left: the round's start
+  // time is saved and elapsed time is always worked out from the wall clock.
+  // Practice keeps its pausing count-up. Fixed at mount: a fresh Daily starts
+  // now, a resumed one keeps its original start.
+  const dailyStartedAtRef = useRef<number | null>(
+    isDaily && !lockedResult ? (initialProgress?.startedAt ?? Date.now()) : null
+  );
+  const dailyLimit = timeLimit ?? 0;
+  const dailyElapsed = (startedAt: number) =>
+    dailyLimit - secondsLeft(startedAt, dailyLimit);
+
   // Resume from a previous session: the puzzle grid is deterministic per
   // day (same seed), so we can match saved word strings back against
   // puzzleData.words to reconstruct full PlacedWord + highlighted cells.
@@ -270,7 +284,7 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
     return {
       score: initialProgress.score,
       foundWords: restoredWords,
-      elapsedSeconds: initialProgress.elapsedSeconds,
+      elapsedSeconds: dailyElapsed(initialProgress.startedAt),
       foundCells: restoredCells,
       currentSelection: [],
     };
@@ -309,16 +323,25 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeLimitRef = useRef(timeLimit);
   const triggerFinishRef = useRef<(() => void) | null>(null);
+  const finishingRef = useRef(false);
 
   useEffect(() => {
     if (gameFinished) return;
     timerRef.current = setInterval(() => {
       setGameState(prev => {
-        const next = prev.elapsedSeconds + 1;
+        // Daily: wall-clock time since the round started, so time spent
+        // outside the app counts. Practice: one tick at a time, so it pauses.
+        const startedAt = dailyStartedAtRef.current;
+        const next = startedAt !== null ? dailyElapsed(startedAt) : prev.elapsedSeconds + 1;
+        if (next === prev.elapsedSeconds) return prev;
         // Auto-finish when countdown expires
         if (timeLimitRef.current && next >= timeLimitRef.current) {
           setTimeout(() => triggerFinishRef.current?.(), 0);
-        } else if (timeLimitRef.current && timeLimitRef.current - next === 10) {
+        } else if (
+          timeLimitRef.current &&
+          timeLimitRef.current - prev.elapsedSeconds > 10 &&
+          timeLimitRef.current - next <= 10
+        ) {
           // Single warning at exactly 10s left — not a repeating countdown buzz.
           HapticManager.wordSearch.timeRunningOut();
         }
@@ -326,6 +349,27 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
       });
     }, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameFinished]);
+
+  // A resumed Daily whose time ran out while the player was away ends right
+  // away with the words found before they left. Coming back to the app
+  // mid-Daily resyncs the clock immediately, and ends the round at zero.
+  useEffect(() => {
+    if (gameFinished) return;
+    const syncDailyClock = () => {
+      const startedAt = dailyStartedAtRef.current;
+      if (startedAt === null || !dailyLimit) return;
+      const elapsed = dailyElapsed(startedAt);
+      setGameState(prev => (prev.elapsedSeconds === elapsed ? prev : { ...prev, elapsedSeconds: elapsed }));
+      if (elapsed >= dailyLimit) setTimeout(() => triggerFinishRef.current?.(), 0);
+    };
+    syncDailyClock();
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') syncDailyClock();
+    });
+    return () => sub.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameFinished]);
 
   const measureGrid = () => {
@@ -362,13 +406,15 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
   // being backgrounded, force-quit, or swiped away mid-game.
   useEffect(() => {
     if (!isDaily || gameFinished) return;
+    const startedAt = dailyStartedAtRef.current;
+    if (startedAt === null) return;
     saveWordSearchDailyProgress({
       dateISO: getTodayDateString(),
       foundWordTexts: gameState.foundWords.map(w => w.word),
       score: gameState.score,
-      elapsedSeconds: gameState.elapsedSeconds,
+      startedAt,
     });
-  }, [isDaily, gameFinished, gameState.foundWords, gameState.score, gameState.elapsedSeconds]);
+  }, [isDaily, gameFinished, gameState.foundWords, gameState.score]);
 
   // Autosave practice progress on every change so the attempt survives the app
   // being backgrounded or force-quit mid-game.
@@ -527,7 +573,10 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
   ).current;
 
   const triggerFinish = async () => {
-    if (gameFinished) return;
+    // The timer, the foreground resync and the last word found can all ask
+    // to finish; only the first one may save the result.
+    if (gameFinished || finishingRef.current) return;
+    finishingRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
 
     const state = gameStateRef.current;
@@ -580,6 +629,7 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
           multiplier,
           timeBonus,
         });
+        submitDaily('wordsearch', { foundCount: state.foundWords.length, score: finalScore });
         await saveWSDailyHistoryEntry({
           dateISO: getTodayDateString(),
           result: allWordsFound ? 'won' : 'played',
@@ -666,8 +716,9 @@ const PlayScreen: React.FC<PlayScreenProps> = ({
     router.back();
   };
 
-  // Progress is autosaved continuously — leaving mid-game just freezes it
-  // exactly where you left off. No confirmation needed; just go.
+  // Progress is autosaved continuously, so leaving mid-game needs no
+  // confirmation. Practice freezes where you left off; the Daily clock keeps
+  // running and the round ends on return if its time ran out.
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

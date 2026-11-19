@@ -47,6 +47,9 @@ type BaseNewProps = {
   badge?: string[];
 
   hero?: HeroSpec;
+  /** Absolutely positioned in the hero card's top-right corner, so it adds
+   * no height: the daily leaderboard rank mark goes here. */
+  heroCorner?: React.ReactNode;
   pills?: PillTriple;
   signature?: React.ReactNode;
   chips?: ChipSpec[];
@@ -273,6 +276,7 @@ const ResultsScreenV2: React.FC<NewResultsScreenProps> = ({
   subtitle,
   badge,
   hero,
+  heroCorner,
   pills,
   signature,
   chips,
@@ -353,6 +357,7 @@ const ResultsScreenV2: React.FC<NewResultsScreenProps> = ({
                   {!!hero.suffix && <Text style={[v2Styles.heroSuffix, { color: SUBTEXT }]}> {hero.suffix}</Text>}
                 </Text>
                 {!!hero.note && <Text style={[v2Styles.heroNote, { color: SUBTEXT }]}>{hero.note}</Text>}
+                {heroCorner}
               </Card>
             )}
 

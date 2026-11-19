@@ -4,6 +4,7 @@ import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { Flame, Share2, Trophy } from 'lucide-react-native';
 
 import { useTheme } from '../../shared/ThemeContext';
+import { DAILY_CLOCK_NOTE } from '../../shared/dailyClock';
 import {
   buildScoreBlocks,
   formatDisplayDate,
@@ -100,6 +101,9 @@ export const DailyChallengeCard: React.FC<Props> = ({
             {inProgress ? "Continue Today's Challenge" : "Play Today's Challenge"}
           </Text>
         </Pressable>
+      )}
+      {!played && (
+        <Text style={[styles.clockNote, { color: SUBTEXT }]}>{DAILY_CLOCK_NOTE}</Text>
       )}
 
       {/* View Results + Share */}
@@ -207,6 +211,11 @@ const styles = StyleSheet.create({
   playButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  clockNote: {
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
   },
   actionRow: {
     flexDirection: 'row',

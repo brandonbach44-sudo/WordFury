@@ -237,16 +237,30 @@ export interface WordSearchDailyProgress {
   dateISO: string; // YYYY-MM-DD — progress from a different day is stale/ignored
   foundWordTexts: string[]; // just the word strings — matched back against the (deterministic) puzzle on resume
   score: number;
-  elapsedSeconds: number;
+  // Epoch ms the round started. The Daily clock keeps running while the app
+  // is closed, so elapsed time is always derived from this.
+  startedAt: number;
 }
 
+/**
+ * Today's in-progress Daily, or null. A round whose time ran out while the
+ * player was away is still returned, so it can be ended with the words found.
+ */
 export async function loadWordSearchDailyProgress(): Promise<WordSearchDailyProgress | null> {
   try {
     const raw = await AsyncStorage.getItem(DAILY_PROGRESS_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || parsed.dateISO !== getTodayDateString()) return null;
-    return parsed;
+    if (typeof parsed.startedAt === 'number') return parsed;
+    // Saved by an older build that stored elapsed seconds instead.
+    if (typeof parsed.elapsedSeconds !== 'number') return null;
+    return {
+      dateISO: parsed.dateISO,
+      foundWordTexts: parsed.foundWordTexts ?? [],
+      score: parsed.score ?? 0,
+      startedAt: Date.now() - Math.max(0, parsed.elapsedSeconds) * 1000,
+    };
   } catch {
     return null;
   }

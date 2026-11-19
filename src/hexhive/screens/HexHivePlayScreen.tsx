@@ -22,6 +22,8 @@ import { AchievementPopup } from '../../shared/AchievementPopup';
 import { WordReportPrompt } from '../../shared/WordReportPrompt';
 import { maybeRequestReview } from '../../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyReminders';
+import { createHexHiveSubmitter } from '../../shared/leaderboards/submit';
+import { DailyRankMark } from '../../shared/leaderboards/ui';
 import HexGrid, { type Feedback } from '../components/HexGrid';
 import WordList from '../components/WordList';
 import RankProgressBar from '../components/RankProgressBar';
@@ -136,6 +138,16 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
       if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
     };
   }, []);
+
+  // Daily only: the Hex Hive board takes the score while the player is still
+  // going. Throttled to once every 10 seconds, sent right away on Master, and
+  // once more when the screen closes.
+  const [hexSubmitter] = useState(() =>
+    mode === 'daily' ? createHexHiveSubmitter(dailyDateISO ?? getTodayDateString()) : null
+  );
+  useEffect(() => {
+    return () => hexSubmitter?.flush();
+  }, [hexSubmitter]);
 
   // Autosave Quick Play progress whenever words are found so the attempt
   // survives app backgrounding. timeLeft is best-effort (saved on word-found,
@@ -258,6 +270,14 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
 
     if (mode === 'daily') {
       await saveDailyProgress({ dateISO: dailyDateISO ?? getTodayDateString(), foundWords: newFound });
+      // wordsAtMaster is the found count at the moment Master is reached;
+      // the board only reads it when reachedMaster is true.
+      hexSubmitter?.update({
+        reachedMaster: justWon,
+        wordsAtMaster: newFound.length,
+        score: newScore,
+        masterTarget: targetScore,
+      });
     }
 
     // Update stats — daily and Quick Play each get their own lifetime
@@ -637,6 +657,13 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
             subtitle={`${foundWords.length} word${foundWords.length !== 1 ? 's' : ''} \u00b7 ${score} points`}
             badge={[rank.name]}
             hero={{ label: 'Score', value: `${score}` }}
+            heroCorner={
+              <DailyRankMark
+                gameId="hexhive"
+                dateISO={dailyDateISO}
+                visible={mode === 'daily' && showWinCelebration}
+              />
+            }
             pills={pills}
             signature={renderRankLadder(rank, score)}
             lifetime={lifetime}

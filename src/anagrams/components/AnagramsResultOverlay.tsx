@@ -10,6 +10,7 @@ import { useTheme } from '../../shared/ThemeContext';
 import { AchievementPopup, AchievementLike } from '../../shared/AchievementPopup';
 import { ResultsScreen, Card, withOpacity, type PillTriple, type LifetimeSpec } from '../../shared/ResultsScreen';
 import { accentForGame } from '../../shared/gameColors';
+import { DailyRankMark } from '../../shared/leaderboards/ui';
 import type { RoundResult } from '../utils/scoring';
 
 export interface AnagramsLifetimeStats {
@@ -206,6 +207,7 @@ const AnagramsResultOverlay: React.FC<Props> = ({
       {isDaily ? (
         <ResultsScreen
           {...commonProps}
+          heroCorner={<DailyRankMark gameId="anagrams" visible={visible} />}
           countdown={
             nextDailySecondsRemaining != null
               ? { label: 'Next daily in', value: formatCountdown(nextDailySecondsRemaining) }

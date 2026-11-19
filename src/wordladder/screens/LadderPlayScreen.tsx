@@ -22,6 +22,7 @@ import { AchievementPopup } from '../../shared/AchievementPopup';
 import { ConfirmModal } from '../../shared/ConfirmModal';
 import { maybeRequestReview } from '../../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyReminders';
+import { submitDaily } from '../../shared/leaderboards/submit';
 
 import type { LadderDifficulty, LadderPuzzle } from '../utils/generator';
 import { getHintPath } from '../utils/generator';
@@ -264,6 +265,12 @@ const LadderPlayScreen: React.FC<Props> = ({
         start: puzzle.start,
         end: puzzle.end,
         chain: finalChain,
+      });
+      submitDaily('wordladder', {
+        gaveUp: !won,
+        stepsOverPar: steps - puzzle.par,
+        hints: finalHints,
+        seconds: finalElapsed,
       });
       await saveLadderDailyHistoryEntry({
         dateISO: getTodayDateString(),

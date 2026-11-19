@@ -2,6 +2,11 @@
 //
 // "Your Fury" — the cross-game history screen.
 //
+// Leaderboards added the weekly Fury board at the top of this screen (see
+// src/shared/leaderboards/WeeklyFurySection.tsx). Unlike the history below,
+// that section does write: opening it settles bonuses and posts the week's
+// total to Game Center.
+//
 // ── Why this screen exists ──────────────────────────────────────────────────
 // The ritual shipped with real substance (Fury Streak, Perfect Days, Streak
 // Skips) and exactly one place to see any of it: a number on the Today card
@@ -48,6 +53,7 @@ import {
 } from '../src/shared/furyHistory';
 import { accentForGame } from '../src/shared/gameColors';
 import { useTheme } from '../src/shared/ThemeContext';
+import { WeeklyFurySection } from '../src/shared/leaderboards/WeeklyFurySection';
 
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -163,6 +169,11 @@ export default function FuryHistoryScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* ── Weekly Fury board ────────────────────────────────────────────
+              This week's Fury points and the weekly leaderboard come first;
+              the streak history below is unchanged. */}
+          <WeeklyFurySection />
+
           {/* ── Hero ─────────────────────────────────────────────────────────
               Current streak is the headline because it is the number at stake;
               best sits beside it as the thing to beat. */}
