@@ -25,6 +25,7 @@ import { FallingLetters } from '../../src/shared/FallingLetters';
 import DailyCalendar, { type CalendarHistory } from '../../src/shared/DailyCalendar';
 import { COLORS } from '../../src/shared/theme';
 import { DAILY_CLOCK_NOTE } from '../../src/shared/dailyClock';
+import { TodayLeaderboardCard } from '../../src/shared/leaderboards/TodayLeaderboardCard';
 import {
   formatDisplayDate,
   getTodayDateString,
@@ -325,6 +326,8 @@ const WordSearchEntryScreen: React.FC = () => {
                 </View>
               )}
             </View>
+
+            <TodayLeaderboardCard gameId="wordsearch" />
 
             {/* Quick Play Card */}
             <TouchableOpacity

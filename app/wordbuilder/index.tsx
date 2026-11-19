@@ -36,6 +36,7 @@ import { recordRejectedWord } from '../../src/shared/wordReports';
 import { DAILY_CLOCK_NOTE, secondsLeft } from '../../src/shared/dailyClock';
 import { submitDaily } from '../../src/shared/leaderboards/submit';
 import { DailyRankMark } from '../../src/shared/leaderboards/ui';
+import { TodayLeaderboardCard } from '../../src/shared/leaderboards/TodayLeaderboardCard';
 
 // Theme
 import { useTheme } from '../../src/shared/ThemeContext';
@@ -1428,6 +1429,8 @@ export default function WordBuilder() {
               </View>
             )}
           </View>
+
+          <TodayLeaderboardCard gameId="wordsmith" />
 
           {/* Mode Selection */}
           {modeSelection === 'none' ? (

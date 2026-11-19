@@ -21,6 +21,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GameCenter } from '../../../modules/game-center';
 import { boardFor, type DailyResults, type GameId } from './boards';
+import { invalidateBoardCache } from './boardCache';
 import { dateContext, diffDaysISO, localDateISO } from './dates';
 import { enableGameCenter, getGameCenterState, isSignedIn } from './gameCenter';
 import { recordFinish, submitWeeklyTotal } from './ledger';
@@ -142,6 +143,7 @@ async function processItem(item: PendingScore, submitted: SubmittedMap): Promise
   try {
     await GameCenter.submitScore(item.boardId, item.value, item.context);
     submitted[item.boardId] = { date: item.puzzleDateISO, mine: true };
+    invalidateBoardCache(item.boardId);
     return 'submitted';
   } catch {
     return 'retry';

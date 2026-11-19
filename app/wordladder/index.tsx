@@ -25,6 +25,7 @@ import DailyCalendar, { type CalendarHistory } from '../../src/shared/DailyCalen
 import { loadLadderDailyHistory } from '../../src/wordladder/utils/ladderStorage';
 
 import { useTheme } from '../../src/shared/ThemeContext';
+import { TodayLeaderboardCard } from '../../src/shared/leaderboards/TodayLeaderboardCard';
 import { FallingLetters } from '../../src/shared/FallingLetters';
 import { COLORS } from '../../src/shared/theme';
 import {
@@ -354,6 +355,8 @@ export default function WordLadderEntryScreen() {
                 </View>
               )}
             </View>
+
+            <TodayLeaderboardCard gameId="wordladder" />
 
             {/* Quick Play — difficulty picker */}
             <Text style={[styles.sectionLabel, { color: background.textColor }]}>Quick Play</Text>

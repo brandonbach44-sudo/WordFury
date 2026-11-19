@@ -22,6 +22,7 @@ import { maybeRequestReview } from '../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../shared/dailyReminders';
 import { usePausingStopwatch } from '../shared/usePausingStopwatch';
 import { submitDaily } from '../shared/leaderboards/submit';
+import { TodayLeaderboardCard } from '../shared/leaderboards/TodayLeaderboardCard';
 
 import { AchievementPopup } from '../shared/AchievementPopup';
 import { FallingLetters } from '../shared/FallingLetters';
@@ -1064,6 +1065,7 @@ export default function HangmanScreen() {
               }
             }}
           />
+          <TodayLeaderboardCard gameId="hangman" />
           <TouchableOpacity
             style={[
               styles.gameModeCard,

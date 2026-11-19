@@ -25,6 +25,7 @@ import { maybeRequestReview } from '../../shared/reviewPrompt';
 import { syncDailyReminder, maybeFlagReminderOptIn } from '../../shared/dailyReminders';
 import { submitDaily } from '../../shared/leaderboards/submit';
 import { DailyRankMark } from '../../shared/leaderboards/ui';
+import { TodayLeaderboardCard } from '../../shared/leaderboards/TodayLeaderboardCard';
 import { AchievementPopup } from '../../shared/AchievementPopup';
 import { WordReportPrompt } from '../../shared/WordReportPrompt';
 import { FallingLetters } from '../../shared/FallingLetters';
@@ -1000,6 +1001,8 @@ export default function GameScreen() {
                 : startDailyGame
               }
             />
+
+            <TodayLeaderboardCard gameId="wordgrid" />
 
             {/* Quick Play button */}
             <TouchableOpacity
