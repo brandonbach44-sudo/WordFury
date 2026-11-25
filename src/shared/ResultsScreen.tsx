@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
+import { heroFontSize } from './heroFontSize';
 import { useTheme } from './ThemeContext';
 
 export type PillSpec = { label: string; value: string };
@@ -348,10 +349,8 @@ const ResultsScreenV2: React.FC<NewResultsScreenProps> = ({
               <Card padding={16} style={v2Styles.heroCard}>
                 <Text style={[v2Styles.heroLabel, { color: SUBTEXT }]}>{hero.label}</Text>
                 <Text
-                  style={[v2Styles.heroValue, { color: TEXT }]}
+                  style={[v2Styles.heroValue, heroFontSize(hero.value, hero.suffix), { color: TEXT }]}
                   numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.6}
                 >
                   {hero.value}
                   {!!hero.suffix && <Text style={[v2Styles.heroSuffix, { color: SUBTEXT }]}> {hero.suffix}</Text>}
@@ -509,7 +508,7 @@ const v2Styles = StyleSheet.create({
 
   heroCard: { marginTop: 16, alignItems: 'center' },
   heroLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 2.2, textTransform: 'uppercase', textAlign: 'center' },
-  heroValue: { fontSize: 54, fontWeight: '900', letterSpacing: -1, lineHeight: 55, textAlign: 'center' },
+  heroValue: { fontWeight: '900', letterSpacing: -1, textAlign: 'center' },
   heroSuffix: { fontSize: 20, fontWeight: '800' },
   heroNote: { fontSize: 12, fontWeight: '600', marginTop: 3, textAlign: 'center' },
 

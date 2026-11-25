@@ -11,6 +11,7 @@
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { heroFontSize } from '../heroFontSize';
 import { withOpacity } from '../ResultsScreen';
 import { useTheme } from '../ThemeContext';
 import { GAME_IDS, WEEKLY_BOARD_ID } from './boards';
@@ -73,6 +74,7 @@ export const WeeklyFurySection: React.FC = () => {
   );
 
   const dailies = breakdown ? breakdown.dailiesDone.reduce((a, b) => a + b, 0) : 0;
+  const heroText = fmt(breakdown?.total ?? 0);
   const local = board?.local ?? null;
   const rows = board?.rows ?? [];
   const localShown = !!local && rows.some((r) => r.playerId === local.playerId);
@@ -135,12 +137,10 @@ export const WeeklyFurySection: React.FC = () => {
       <View style={[styles.card, styles.hero, cardColors(background)]}>
         <Text style={[styles.heroLabel, { color: background.secondaryText }]}>Your Fury points</Text>
         <Text
-          style={[styles.heroValue, { color: background.textColor }]}
+          style={[styles.heroValue, heroFontSize(heroText), { color: background.textColor }]}
           numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.6}
         >
-          {fmt(breakdown?.total ?? 0)}
+          {heroText}
         </Text>
         <Text style={[styles.heroNote, { color: background.secondaryText }]}>
           {dailies} {dailies === 1 ? 'daily' : 'dailies'}
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: 18, borderWidth: 1 },
   hero: { marginTop: 16, padding: 16, alignItems: 'center' },
   heroLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 2.2, textTransform: 'uppercase', textAlign: 'center' },
-  heroValue: { fontSize: 54, fontWeight: '900', letterSpacing: -1, lineHeight: 55, marginTop: 4 },
+  heroValue: { fontWeight: '900', letterSpacing: -1, marginTop: 4 },
   heroNote: { fontSize: 12, fontWeight: '600', marginTop: 3 },
   seg: { marginTop: 12 },
   list: { marginTop: 10, paddingVertical: 4, paddingHorizontal: 16 },
