@@ -121,9 +121,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginBottom: 24,
+    // Fill the column whatever the parent's alignItems (Hangman centers).
+    alignSelf: 'stretch',
   },
-  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  title: { fontSize: 17, fontWeight: '900' },
+  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
+  title: { fontSize: 17, fontWeight: '900', flexShrink: 1 },
   more: { fontSize: 12, fontWeight: '800' },
   rows: { marginTop: 8 },
 });
