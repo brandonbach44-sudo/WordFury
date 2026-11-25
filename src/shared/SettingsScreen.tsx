@@ -20,6 +20,7 @@ import { HapticManager } from './HapticManager';
 import { MotionPreference } from './motionPreference';
 import { BackgroundOption, COLORS, getLightBackgrounds } from './theme';
 import FeedbackForm from '../../FeedbackForm';
+import { buildReportMessage, clearWordReports, loadPendingReports, type WordReport } from './wordReports';
 import {
   Newspaper,
   Palette,
@@ -73,6 +74,22 @@ export const SettingsScreen: React.FC = () => {
 
   const [showWhatsNew, setShowWhatsNew] = React.useState(false);
   const [showFeedback, setShowFeedback] = React.useState(false);
+  // "Suggest a Word": prefilled with any rejected words waiting to be
+  // reported, which are cleared only after a successful send.
+  const [suggestWord, setSuggestWord] = React.useState<{ message: string; hasReports: boolean } | null>(null);
+  const openSuggestWord = React.useCallback(async () => {
+    let reports: WordReport[] = [];
+    try {
+      reports = (await loadPendingReports()).reports;
+    } catch {
+      // Open with the plain prefill.
+    }
+    setSuggestWord(
+      reports.length > 0
+        ? { message: buildReportMessage(reports), hasReports: true }
+        : { message: 'Words I think should be accepted: ', hasReports: false },
+    );
+  }, []);
   const [reminderPrefs, setReminderPrefs] = React.useState<ReminderPrefs | null>(null);
   const [hapticsEnabled, setHapticsEnabled] = React.useState<boolean>(HapticManager.isEnabled());
   const [motionEnabled, setMotionEnabled] = React.useState<boolean>(MotionPreference.isUserEnabled());
@@ -491,6 +508,26 @@ export const SettingsScreen: React.FC = () => {
             </View>
             <ChevronRight size={20} color={background.secondaryText} />
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.linkRow,
+              styles.linkRowSpaced,
+              { backgroundColor: background.cardColor, borderColor: background.borderColor },
+            ]}
+            onPress={openSuggestWord}
+            activeOpacity={0.7}
+          >
+            <View style={styles.linkInfo}>
+              <Text style={[styles.linkLabel, { color: background.textColor }]}>
+                Suggest a Word
+              </Text>
+              <Text style={[styles.linkDescription, { color: background.secondaryText }]}>
+                A real word the games didn't accept
+              </Text>
+            </View>
+            <ChevronRight size={20} color={background.secondaryText} />
+          </TouchableOpacity>
         </View>
 
         {/* ==================== LEGAL SECTION ==================== */}
@@ -548,6 +585,16 @@ export const SettingsScreen: React.FC = () => {
       <FeedbackForm
         visible={showFeedback}
         onClose={() => setShowFeedback(false)}
+      />
+
+      <FeedbackForm
+        visible={suggestWord !== null}
+        initialCategory="suggestion"
+        initialMessage={suggestWord?.message ?? ''}
+        onSent={() => {
+          if (suggestWord?.hasReports) clearWordReports().catch(() => {});
+        }}
+        onClose={() => setSuggestWord(null)}
       />
     </SafeAreaView>
   );
@@ -665,6 +712,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
+  },
+  linkRowSpaced: {
+    marginTop: 10,
   },
   linkInfo: {
     flex: 1,

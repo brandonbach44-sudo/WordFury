@@ -99,10 +99,9 @@ export function WordReportPrompt() {
           setPendingReports([]);
           clearWordReports().catch(() => {});
         }}
-        onClose={() => {
-          setShowForm(false);
-          markReportsOffered().catch(() => {});
-        }}
+        // Closing the form without sending leaves the offer up: only the X
+        // (dismiss) and a successful send mark the day as offered.
+        onClose={() => setShowForm(false)}
       />
     </>
   );

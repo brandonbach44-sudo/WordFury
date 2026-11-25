@@ -38,7 +38,17 @@ const OUTER_OFFSETS = [
 
 const CONTAINER_SIZE = (HEX_W * 0.75 + GAP * 0.6) * 2 + HEX_W;
 
-export type Feedback = 'valid' | 'pangram' | 'invalid' | 'already_found' | 'too_short' | null;
+// 'invalid' is a word not in the word list; 'missing_center' and
+// 'invalid_letters' break the hive's own rules and say so.
+export type Feedback =
+  | 'valid'
+  | 'pangram'
+  | 'invalid'
+  | 'missing_center'
+  | 'invalid_letters'
+  | 'already_found'
+  | 'too_short'
+  | null;
 
 interface HexTileProps {
   letter: string;
@@ -127,7 +137,11 @@ export default function HexGrid({
   const guessColor =
     feedback === 'valid' || feedback === 'pangram'
       ? accentColor
-      : feedback === 'invalid' || feedback === 'too_short' || feedback === 'already_found'
+      : feedback === 'invalid' ||
+        feedback === 'missing_center' ||
+        feedback === 'invalid_letters' ||
+        feedback === 'too_short' ||
+        feedback === 'already_found'
       ? semantic.wrong
       : textColor;
 
@@ -138,6 +152,10 @@ export default function HexGrid({
       ? 'Already found'
       : feedback === 'too_short'
       ? 'Too short'
+      : feedback === 'missing_center'
+      ? 'Missing center letter'
+      : feedback === 'invalid_letters'
+      ? 'Letter not in hive'
       : feedback === 'invalid'
       ? 'Not in word list'
       : null;

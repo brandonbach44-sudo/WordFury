@@ -224,7 +224,11 @@ export default function HexHivePlayScreen({ puzzle, mode, initialFoundWords, ini
           ? 'already_found'
           : result.status === 'too_short'
           ? 'too_short'
-          : result.status === 'not_a_word' || result.status === 'invalid_letters' || result.status === 'missing_center'
+          : result.status === 'missing_center'
+          ? 'missing_center'
+          : result.status === 'invalid_letters'
+          ? 'invalid_letters'
+          : result.status === 'not_a_word'
           ? 'invalid'
           : null
       );
