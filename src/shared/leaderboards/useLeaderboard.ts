@@ -9,7 +9,7 @@ import { boardCacheKey, getCachedBoard, setCachedBoard } from './boardCache';
 import { addDaysISO, diffDaysISO, localDateISO, weekMondayISO } from './dates';
 import { loadBoard, type LoadedBoard } from './entries';
 import { useGameCenterState } from './gameCenter';
-import { currentOccurrenceDate } from './occurrence';
+import { occurrenceStatus } from './occurrence';
 
 export type LeaderboardStatus =
   | 'unavailable' // no Game Center on this device or build
@@ -29,11 +29,14 @@ export type LeaderboardView = {
 /**
  * Which occurrence holds a given puzzle date or week: 0 is the one open now,
  * 1 the one before, and so on. Negative means it hasn't opened yet.
+ * 'notOpen' when the board's first occurrence hasn't started, null when
+ * Game Center couldn't be read.
  */
-export async function occurrencesBackFor(boardId: string, dateISO: string): Promise<number | null> {
-  const open = await currentOccurrenceDate(boardId);
-  if (!open) return null;
-  return diffDaysISO(open, dateISO);
+export async function occurrencesBackFor(boardId: string, dateISO: string): Promise<number | 'notOpen' | null> {
+  const status = await occurrenceStatus(boardId);
+  if (status.kind === 'notOpen') return 'notOpen';
+  if (status.kind !== 'open') return null;
+  return diffDaysISO(status.dateISO, dateISO);
 }
 
 /**
@@ -77,18 +80,18 @@ export function useLeaderboard(
     let cancelled = false;
     (async () => {
       try {
-        let back: number;
+        let back: number | 'notOpen';
         if (weeksBack !== undefined) {
           const monday = addDaysISO(weekMondayISO(localDateISO()), -7 * weeksBack);
           const days = await occurrencesBackFor(boardId, monday);
           if (days === null) throw new Error('no occurrence');
-          back = Math.floor(days / 7);
+          back = days === 'notOpen' ? days : Math.floor(days / 7);
         } else {
           const fromToday = await occurrencesBackFor(boardId, localDateISO());
           if (fromToday === null) throw new Error('no occurrence');
-          back = fromToday + daysBack;
+          back = fromToday === 'notOpen' ? fromToday : fromToday + daysBack;
         }
-        if (back < 0) {
+        if (back === 'notOpen' || back < 0) {
           if (!cancelled) {
             setBoard(null);
             setStatus('notOpen');

@@ -121,6 +121,8 @@ export const WeeklyFurySection: React.FC = () => {
         </Text>
       </Pressable>
     );
+  } else if (status === 'notOpen') {
+    list = <Text style={[styles.note, { color: background.secondaryText }]}>Weekly Fury opens Monday</Text>;
   } else if (status === 'loading') {
     list = <Text style={[styles.note, { color: background.secondaryText }]}>Loading...</Text>;
   }
