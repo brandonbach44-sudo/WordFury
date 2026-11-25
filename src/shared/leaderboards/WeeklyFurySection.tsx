@@ -94,7 +94,10 @@ export const WeeklyFurySection: React.FC = () => {
     list = (
       <>
         <View style={[styles.card, styles.list, cardColors(background)]}>
-          {rows.length === 0 && !local && <MessageRow text="No Fury points posted yet this week" first />}
+          {rows.length === 0 && !local && <MessageRow
+              text={week === 'this' ? 'No Fury points posted yet this week' : 'No Fury points posted last week'}
+              first
+            />}
           {rows.map((row, i) => (
             <WeeklyRowView key={row.playerId} row={row} monday={monday} first={i === 0} />
           ))}

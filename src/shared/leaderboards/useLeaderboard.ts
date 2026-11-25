@@ -40,6 +40,18 @@ export async function occurrencesBackFor(boardId: string, dateISO: string): Prom
 }
 
 /**
+ * The status a failed board load shows. Asking for an occurrence before the
+ * board's first one (Last Week in the weekly board's first week, Yesterday
+ * on a daily board's first day) rejects with E_NO_OCCURRENCE from the native
+ * walk back: nothing was posted then, so it shows as empty. Anything else is
+ * a real error. Pure, for testing.
+ */
+export function statusForLoadError(e: unknown): 'empty' | 'error' {
+  const code = e && typeof e === 'object' && 'code' in e ? (e as { code?: unknown }).code : undefined;
+  return code === 'E_NO_OCCURRENCE' ? 'empty' : 'error';
+}
+
+/**
  * Loads `boardId` for the occurrence `daysBack` before the one holding the
  * player's local today (daily boards), or `weeksBack` weeks before the one
  * holding this local week (the weekly board).
@@ -109,8 +121,10 @@ export function useLeaderboard(
         if (cancelled) return;
         setBoard(data);
         setStatus(data.rows.length === 0 && !data.local ? 'empty' : 'ready');
-      } catch {
-        if (!cancelled) setStatus('error');
+      } catch (e) {
+        if (cancelled) return;
+        setBoard(null);
+        setStatus(statusForLoadError(e));
       }
     })();
     return () => {
