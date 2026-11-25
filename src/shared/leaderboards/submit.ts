@@ -14,20 +14,22 @@
 // First-result guard. "Already played" locks live in AsyncStorage, so a
 // reinstall clears them. Before the first submission for a board and date
 // this device has no record of, the player's existing entry is loaded; if
-// there is one, that board and date are blocked for the day. Hex Hive may
+// there is a real one for that date (rank 1 or more, context matching the
+// puzzle date), that board and date are blocked for the day. Hex Hive may
 // keep submitting higher scores, but only when this device made the first
 // submission.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GameCenter } from '../../../modules/game-center';
+import { GameCenter, type GameCenterEntriesResult } from '../../../modules/game-center';
 import { boardFor, type DailyResults, type GameId } from './boards';
 import { invalidateBoardCache } from './boardCache';
 import { dateContext, diffDaysISO, localDateISO } from './dates';
+import { realLocal } from './entries';
 import { enableGameCenter, getGameCenterState, isSignedIn } from './gameCenter';
 import { recordFinish, submitWeeklyTotal } from './ledger';
 import { currentOccurrenceDate } from './occurrence';
 
-const SUBMITTED_KEY = 'leaderboard_submitted_v1';
+export const SUBMITTED_KEY = 'leaderboard_submitted_v1';
 const PENDING_KEY = 'leaderboard_pending_v1';
 
 export type PendingScore = {
@@ -37,8 +39,8 @@ export type PendingScore = {
   puzzleDateISO: string;
 };
 
-type SubmittedRecord = { date: string; mine: boolean };
-type SubmittedMap = Record<string, SubmittedRecord>;
+export type SubmittedRecord = { date: string; mine: boolean };
+export type SubmittedMap = Record<string, SubmittedRecord>;
 
 export type DailySubmissionState = 'none' | 'pending' | 'submitted' | 'blocked';
 
@@ -96,6 +98,19 @@ export function timeZoneVerdict(scoreDateISO: string, occurrenceDateISO: string)
   return 'drop'; // board already closed, or the device clock is wrong
 }
 
+// ── First-result guard ────────────────────────────────────────────────────────
+
+/**
+ * Whether an existing entry blocks the first submission for a puzzle date:
+ * only a real local entry (rank 1 or more) whose context is that date. Game
+ * Center's placeholder entry, or a real one from another date, never blocks.
+ * Pure, for testing.
+ */
+export function firstResultBlocks(res: Pick<GameCenterEntriesResult, 'local'>, puzzleDateISO: string): boolean {
+  const entry = realLocal(res);
+  return entry !== null && entry.context === dateContext(puzzleDateISO);
+}
+
 // ── Queue processing ──────────────────────────────────────────────────────────
 
 // Submissions run one at a time so two quick Hex Hive submits can't both pass
@@ -131,7 +146,7 @@ async function processItem(item: PendingScore, submitted: SubmittedMap): Promise
     // and that first result is final.
     try {
       const res = await GameCenter.loadEntries(item.boardId, 'global', 1, 1, 0);
-      if (res.local) {
+      if (firstResultBlocks(res, item.puzzleDateISO)) {
         submitted[item.boardId] = { date: item.puzzleDateISO, mine: false };
         return 'blocked';
       }

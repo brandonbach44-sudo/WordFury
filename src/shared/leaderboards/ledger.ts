@@ -26,8 +26,8 @@ import { hexMasterTargetFor } from './hexTarget';
 import { currentOccurrenceDate } from './occurrence';
 import { appendRecap, type RecapItem } from './recap';
 
-const LEDGER_KEY = 'fury_week_ledger_v2';
-const REBUILT_KEY = 'fury_ledger_rebuilt_v1';
+export const LEDGER_KEY = 'fury_week_ledger_v2';
+export const REBUILT_KEY = 'fury_ledger_rebuilt_v1';
 const PRUNE_DAYS = 35;
 // Daily boards close at 08:00 UTC on the day after their puzzle date.
 const CLOSE_HOUR_UTC = 8;

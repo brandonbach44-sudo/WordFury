@@ -10,6 +10,7 @@ import { syncDailyReminder } from '../src/shared/dailyReminders';
 import { HapticManager } from '../src/shared/HapticManager';
 import { MotionPreference } from '../src/shared/motionPreference';
 import { initGameCenterAtLaunch } from '../src/shared/leaderboards/gameCenter';
+import { runFix112Migration } from '../src/shared/leaderboards/migration112';
 import { installLeaderboardSync, syncLeaderboards } from '../src/shared/leaderboards/lifecycle';
 
 // Pre-warm the large shared word list (~41k entries) at app startup. Without
@@ -92,8 +93,12 @@ export default function RootLayout() {
     // Game Center sign-in, only for a player who has opted in before (a
     // finished daily or a tap on a leaderboard card). Never on a first
     // launch, and never awaited, so launch is never blocked on it.
+    // The one-time 1.1.2 cleanup runs first so the first sync after sign-in
+    // never sees the bad records 1.1.1 wrote.
     installLeaderboardSync();
-    initGameCenterAtLaunch();
+    runFix112Migration().finally(() => {
+      initGameCenterAtLaunch();
+    });
 
     // Pre-warm Word Ladder word buckets 2 seconds after the home screen
     // appears, while the player is still reading the menu. Wrapped in

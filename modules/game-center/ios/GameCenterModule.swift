@@ -120,7 +120,10 @@ public class GameCenterModule: Module {
               "occurrenceStart": self.epochMs(target.startDate),
               "durationSeconds": target.duration,
             ]
-            if let local = local {
+            // GameKit returns a placeholder local entry (rank 0, score 0)
+            // when the player has no score in this occurrence. A real entry
+            // always has rank 1 or more.
+            if let local = local, local.rank >= 1 {
               result["local"] = self.entryDict(local)
             }
             promise.resolve(result)

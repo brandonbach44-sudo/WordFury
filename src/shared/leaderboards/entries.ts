@@ -6,7 +6,7 @@
 // with a strictly higher value. Game Center's own rank may split ties, so
 // places are worked out from the values here.
 
-import { GameCenter, type GameCenterEntry } from '../../../modules/game-center';
+import { GameCenter, type GameCenterEntriesResult, type GameCenterEntry } from '../../../modules/game-center';
 import { puzzleDateForOccurrence } from './dates';
 
 export type BoardRow = GameCenterEntry & {
@@ -21,6 +21,17 @@ export type LoadedBoard = {
   /** Puzzle date (daily) or Monday (weekly) the loaded occurrence belongs to. */
   occurrenceDateISO: string | null;
 };
+
+/**
+ * The local player's real entry from a loadEntries result, or null. Game
+ * Center returns a placeholder local entry (rank 0, score 0) when the player
+ * has no score in that occurrence; a real entry always has rank 1 or more.
+ * Every read of a loadEntries result's local entry goes through here.
+ */
+export function realLocal(res: Pick<GameCenterEntriesResult, 'local'>): GameCenterEntry | null {
+  const local = res.local;
+  return local && local.rank >= 1 ? local : null;
+}
 
 /**
  * Shared places for a run of entries sorted best first and starting at
@@ -97,11 +108,10 @@ export async function loadBoard(
   const rows = assignPlaces(res.entries);
 
   let local: BoardRow | null = null;
-  if (res.local) {
-    const inList = rows.find((r) => r.playerId === res.local!.playerId);
-    local = inList
-      ? { ...inList, isLocal: true }
-      : { ...res.local, place: await placeOf(boardId, scope, back, res.local) };
+  const mine = realLocal(res);
+  if (mine) {
+    const inList = rows.find((r) => r.playerId === mine.playerId);
+    local = inList ? { ...inList, isLocal: true } : { ...mine, place: await placeOf(boardId, scope, back, mine) };
   }
 
   return {
@@ -131,9 +141,10 @@ export async function loadLocalStanding(
   const res = await GameCenter.loadEntries(boardId, 'global', 1, 20, occurrencesBack);
   const rows = assignPlaces(res.entries);
   let local: BoardRow | null = null;
-  if (res.local) {
-    const inList = rows.find((r) => r.playerId === res.local!.playerId);
-    local = inList ?? { ...res.local, place: await placeOf(boardId, 'global', occurrencesBack, res.local) };
+  const mine = realLocal(res);
+  if (mine) {
+    const inList = rows.find((r) => r.playerId === mine.playerId);
+    local = inList ?? { ...mine, place: await placeOf(boardId, 'global', occurrencesBack, mine) };
   }
   return {
     local,
