@@ -174,8 +174,8 @@ export const WeeklyFurySection: React.FC = () => {
   );
 };
 
-/** One row of the weekly board. */
-const WeeklyRowView: React.FC<{ row: BoardRow; monday: string; first?: boolean }> = ({ row, monday, first }) => {
+/** One row of the weekly board, on Your Fury and the home card. */
+export const WeeklyRowView: React.FC<{ row: BoardRow; monday: string; first?: boolean }> = ({ row, monday, first }) => {
   const { background } = useTheme();
   const ctx = unpackWeeklyContext(row.context);
   // Squares and medals only mean something for the week they were packed for.

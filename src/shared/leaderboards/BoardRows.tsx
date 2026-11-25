@@ -54,9 +54,10 @@ export const BoardRowView: React.FC<{
   );
 };
 
-/** A plain message row in the same rhythm as the list rows. */
-export const MessageRow: React.FC<{ text: string; first?: boolean; highlight?: boolean }> = ({
+/** A plain message row in the same rhythm as the list rows, with an optional quieter second line. */
+export const MessageRow: React.FC<{ text: string; detail?: string; first?: boolean; highlight?: boolean }> = ({
   text,
+  detail,
   first,
   highlight,
 }) => {
@@ -69,12 +70,19 @@ export const MessageRow: React.FC<{ text: string; first?: boolean; highlight?: b
         highlight && [styles.you, { backgroundColor: withOpacity(background.accentColor, 0.1) }],
       ]}
     >
-      <Text
-        style={[styles.message, { color: highlight ? background.accentColor : background.secondaryText }]}
-        numberOfLines={2}
-      >
-        {text}
-      </Text>
+      <View style={styles.messageWrap}>
+        <Text
+          style={[styles.message, { color: highlight ? background.accentColor : background.secondaryText }]}
+          numberOfLines={2}
+        >
+          {text}
+        </Text>
+        {!!detail && (
+          <Text style={[styles.detail, { color: background.secondaryText }]} numberOfLines={2}>
+            {detail}
+          </Text>
+        )}
+      </View>
     </View>
   );
 };
@@ -104,6 +112,8 @@ const styles = StyleSheet.create({
   result: { flexDirection: 'row', alignItems: 'baseline', gap: 8, flexShrink: 0 },
   main: { fontSize: 14, fontWeight: '900' },
   sub: { fontSize: 12, fontWeight: '700', minWidth: 30, textAlign: 'right' },
-  message: { flex: 1, fontSize: 13, fontWeight: '700' },
+  messageWrap: { flex: 1 },
+  message: { fontSize: 13, fontWeight: '700' },
+  detail: { fontSize: 12, fontWeight: '600', marginTop: 2, opacity: 0.75 },
   gap: { textAlign: 'center', fontWeight: '900', letterSpacing: 3, fontSize: 12, paddingVertical: 2 },
 });

@@ -28,6 +28,7 @@ import { useGameCenterState } from '../src/shared/leaderboards/gameCenter';
 import { syncLeaderboards } from '../src/shared/leaderboards/lifecycle';
 import { takeRecap } from '../src/shared/leaderboards/recap';
 import { loadWeeklyPlace } from '../src/shared/leaderboards/standing';
+import { WeeklyFuryHomeCard } from '../src/shared/leaderboards/WeeklyFuryHomeCard';
 
 const GAMES = [
   {
@@ -637,6 +638,11 @@ export default function Home() {
             </>
           )}
 
+          {/* ── WEEKLY FURY ──────────────────────────────────────────────────
+              This week's top three on the weekly board and the player's own
+              row. Just above the report line, which stays last. */}
+          <WeeklyFuryHomeCard style={styles.weeklyCard} />
+
           {/* ── MISSING WORD REPORT ───────────────────────────────────────────
               Last thing in the scroll, so it costs nothing above the fold and
               the game grid never moves. Only appears when there is something
@@ -874,6 +880,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 8,
   },
+  weeklyCard: { marginTop: 20 },
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
