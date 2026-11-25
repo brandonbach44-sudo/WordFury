@@ -9,7 +9,7 @@ import { BOARDS, type GameId } from './boards';
 import { addDaysISO, localDateISO } from './dates';
 import { tierLabel, type BonusTier } from './furyPoints';
 
-const PENDING_KEY = 'fury_recap_pending_v1';
+export const RECAP_PENDING_KEY = 'fury_recap_pending_v1';
 const LAST_SHOWN_KEY = 'fury_recap_last_shown_v1';
 
 export type RecapItem = {
@@ -22,7 +22,7 @@ export type RecapItem = {
 
 async function readItems(): Promise<RecapItem[]> {
   try {
-    const raw = await AsyncStorage.getItem(PENDING_KEY);
+    const raw = await AsyncStorage.getItem(RECAP_PENDING_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -33,7 +33,7 @@ async function readItems(): Promise<RecapItem[]> {
 export async function appendRecap(items: RecapItem[]): Promise<void> {
   try {
     const existing = await readItems();
-    await AsyncStorage.setItem(PENDING_KEY, JSON.stringify([...existing, ...items].slice(-64)));
+    await AsyncStorage.setItem(RECAP_PENDING_KEY, JSON.stringify([...existing, ...items].slice(-64)));
   } catch {
     // A missed recap is harmless.
   }
@@ -73,7 +73,7 @@ export async function takeRecap(): Promise<string | null> {
     if ((await AsyncStorage.getItem(LAST_SHOWN_KEY)) === today) return null;
     const items = await readItems();
     if (items.length === 0) return null;
-    await AsyncStorage.removeItem(PENDING_KEY);
+    await AsyncStorage.removeItem(RECAP_PENDING_KEY);
     const text = buildRecapText(items, today);
     if (!text) return null;
     await AsyncStorage.setItem(LAST_SHOWN_KEY, today);

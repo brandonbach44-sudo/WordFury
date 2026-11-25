@@ -3,7 +3,8 @@ import type { GameCenterEntry } from '../../../../modules/game-center';
 import { dateContext } from '../dates';
 import { realLocal } from '../entries';
 import { LEDGER_KEY, REBUILT_KEY } from '../ledger';
-import { cleanLedger, cleanSubmitted, FIX_112_KEY, runFix112Migration } from '../migration112';
+import { cleanSubmitted, FIX_112_KEY, runFix112Migration } from '../migration112';
+import { RECAP_PENDING_KEY } from '../recap';
 import { firstResultBlocks, SUBMITTED_KEY } from '../submit';
 
 const entry = (over: Partial<GameCenterEntry> = {}): GameCenterEntry => ({
@@ -59,21 +60,13 @@ describe('1.1.2 migration', () => {
     'wf.daily.hexhive': { date: '2026-11-25', mine: true },
     'wf.daily.hangman': { date: '2026-11-24', mine: false },
   };
+  const kept = { 'wf.daily.hexhive': { date: '2026-11-25', mine: true } };
   const cell = { finish: 50, bonus: 25 };
-  const ledger = {
-    '2026-11-22': { furdle: cell },
-    '2026-11-29': { hangman: cell },
-    '2026-11-30': { furdle: cell },
-    '2026-12-02': { wordsmith: cell },
-  };
+  const ledger = { '2026-11-22': { furdle: cell }, '2026-11-30': { furdle: cell } };
+  const recap = [{ dateISO: '2026-11-24', gameId: 'furdle', bonus: 25, tier: { kind: 'top10' }, place: 1 }];
 
   it('removes only mine: false records', () => {
-    expect(cleanSubmitted(submitted)).toEqual({ 'wf.daily.hexhive': { date: '2026-11-25', mine: true } });
-  });
-
-  it('removes only ledger dates before Nov 30', () => {
-    expect(Object.keys(cleanLedger(ledger))).toEqual(['2026-11-30', '2026-12-02']);
-    expect(cleanLedger(ledger)['2026-11-30']).toEqual(ledger['2026-11-30']);
+    expect(cleanSubmitted(submitted)).toEqual(kept);
   });
 
   describe('in storage', () => {
@@ -81,28 +74,31 @@ describe('1.1.2 migration', () => {
       await AsyncStorage.clear();
     });
 
-    it('cleans both stores, clears the rebuild mark and runs once', async () => {
+    it('cleans the records, clears the ledger, rebuild mark and recap queue, and runs once', async () => {
       await AsyncStorage.setItem(SUBMITTED_KEY, JSON.stringify(submitted));
       await AsyncStorage.setItem(LEDGER_KEY, JSON.stringify(ledger));
       await AsyncStorage.setItem(REBUILT_KEY, '2026-11-25');
+      await AsyncStorage.setItem(RECAP_PENDING_KEY, JSON.stringify(recap));
 
       await runFix112Migration();
 
-      expect(JSON.parse((await AsyncStorage.getItem(SUBMITTED_KEY))!)).toEqual({
-        'wf.daily.hexhive': { date: '2026-11-25', mine: true },
-      });
-      expect(Object.keys(JSON.parse((await AsyncStorage.getItem(LEDGER_KEY))!))).toEqual([
-        '2026-11-30',
-        '2026-12-02',
-      ]);
+      expect(JSON.parse((await AsyncStorage.getItem(SUBMITTED_KEY))!)).toEqual(kept);
+      expect(await AsyncStorage.getItem(LEDGER_KEY)).toBeNull();
       expect(await AsyncStorage.getItem(REBUILT_KEY)).toBeNull();
+      expect(await AsyncStorage.getItem(RECAP_PENDING_KEY)).toBeNull();
       expect(await AsyncStorage.getItem(FIX_112_KEY)).toBe('1');
 
-      // A second launch leaves new records alone.
+      // A second launch leaves everything written since alone.
       const later = { 'wf.daily.furdle': { date: '2026-12-01', mine: false } };
       await AsyncStorage.setItem(SUBMITTED_KEY, JSON.stringify(later));
+      await AsyncStorage.setItem(LEDGER_KEY, JSON.stringify(ledger));
+      await AsyncStorage.setItem(REBUILT_KEY, '2026-12-01');
+      await AsyncStorage.setItem(RECAP_PENDING_KEY, JSON.stringify(recap));
       await runFix112Migration();
       expect(JSON.parse((await AsyncStorage.getItem(SUBMITTED_KEY))!)).toEqual(later);
+      expect(JSON.parse((await AsyncStorage.getItem(LEDGER_KEY))!)).toEqual(ledger);
+      expect(await AsyncStorage.getItem(REBUILT_KEY)).toBe('2026-12-01');
+      expect(JSON.parse((await AsyncStorage.getItem(RECAP_PENDING_KEY))!)).toEqual(recap);
     });
 
     it('copes with empty storage', async () => {

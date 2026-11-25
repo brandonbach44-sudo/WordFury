@@ -4,18 +4,20 @@
 // (rank 0, score 0) was read as a real one, which:
 //   - wrote a `mine: false` "already played" record for every board, blocking
 //     every submission, and
-//   - credited finishing points and a placement bonus for games never played.
+//   - credited finishing points and a placement bonus for games never played,
+//     and queued morning recap items for those phantom bonuses.
 // Every `mine: false` record came from the placeholder, so all are removed.
-// Phantom ledger cells can't be told apart from real ones, so every date
-// before the weekly board's first week (Monday Nov 30, 2026) is removed; no
-// earlier week is ever posted, so nothing scored is lost.
+// Phantom ledger cells can't be told apart from real ones and 1.1.2 may
+// arrive after the first weekly board opens, so the whole ledger is removed;
+// the fixed rebuild reconstructs the week from real Game Center entries. The
+// recap queue goes too, so no phantom "top 10" recap shows.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LEDGER_KEY, REBUILT_KEY, type Ledger } from './ledger';
+import { LEDGER_KEY, REBUILT_KEY } from './ledger';
+import { RECAP_PENDING_KEY } from './recap';
 import { SUBMITTED_KEY, type SubmittedMap } from './submit';
 
 export const FIX_112_KEY = 'leaderboard_fix_112_v1';
-const FIRST_WEEK_MONDAY = '2026-11-30';
 
 /** Drops every record written by the placeholder entry. Pure, for testing. */
 export function cleanSubmitted(map: SubmittedMap): SubmittedMap {
@@ -26,21 +28,15 @@ export function cleanSubmitted(map: SubmittedMap): SubmittedMap {
   return out;
 }
 
-/** Drops every date before Nov 30, 2026. Pure, for testing. */
-export function cleanLedger(ledger: Ledger): Ledger {
-  const out: Ledger = {};
-  for (const [date, day] of Object.entries(ledger)) {
-    if (date >= FIRST_WEEK_MONDAY) out[date] = day;
-  }
-  return out;
-}
-
-async function rewrite<T extends object>(key: string, clean: (v: T) => T): Promise<void> {
-  const raw = await AsyncStorage.getItem(key);
+async function cleanSubmittedStore(): Promise<void> {
+  const raw = await AsyncStorage.getItem(SUBMITTED_KEY);
   if (!raw) return;
   const parsed = JSON.parse(raw);
-  if (!parsed || typeof parsed !== 'object') return;
-  await AsyncStorage.setItem(key, JSON.stringify(clean(parsed as T)));
+  if (!parsed || typeof parsed !== 'object') {
+    await AsyncStorage.removeItem(SUBMITTED_KEY);
+    return;
+  }
+  await AsyncStorage.setItem(SUBMITTED_KEY, JSON.stringify(cleanSubmitted(parsed as SubmittedMap)));
 }
 
 /**
@@ -50,9 +46,8 @@ async function rewrite<T extends object>(key: string, clean: (v: T) => T): Promi
 export async function runFix112Migration(): Promise<void> {
   try {
     if ((await AsyncStorage.getItem(FIX_112_KEY)) === '1') return;
-    await rewrite<SubmittedMap>(SUBMITTED_KEY, cleanSubmitted);
-    await rewrite<Ledger>(LEDGER_KEY, cleanLedger);
-    await AsyncStorage.removeItem(REBUILT_KEY);
+    await cleanSubmittedStore();
+    await AsyncStorage.multiRemove([LEDGER_KEY, REBUILT_KEY, RECAP_PENDING_KEY]);
     await AsyncStorage.setItem(FIX_112_KEY, '1');
   } catch (e) {
     // Not marked done: tries again on the next launch.
