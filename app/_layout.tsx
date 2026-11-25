@@ -177,6 +177,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="fury" />
+          <Stack.Screen name="fury-breakdown" />
           <Stack.Screen name="wordbuilder" />
           <Stack.Screen name="wordle/index" />
           <Stack.Screen name="hangman/index" />
