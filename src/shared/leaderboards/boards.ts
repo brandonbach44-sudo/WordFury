@@ -31,7 +31,10 @@ export const GAME_IDS: readonly GameId[] = [
   'anagrams',
 ];
 
-export const WEEKLY_BOARD_ID = 'wf.weekly.fury';
+// 1.1.2 moved to a new weekly board: 1.1.1 posts inflated totals (phantom
+// finishes and bonuses) to the original 'wf.weekly.fury', and Game Center
+// keeps each player's best for the week, so those can't be undone there.
+export const WEEKLY_BOARD_ID = 'wf.weekly.fury2';
 
 export const MAX_SECONDS = 99999;
 

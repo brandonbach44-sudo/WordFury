@@ -1,4 +1,4 @@
-import { BOARDS, formatClock, GAME_IDS, MAX_SECONDS } from '../boards';
+import { BOARDS, formatClock, GAME_IDS, MAX_SECONDS, WEEKLY_BOARD_ID } from '../boards';
 
 describe('board ids', () => {
   it('has eight distinct daily boards with the planned ids', () => {
@@ -14,6 +14,10 @@ describe('board ids', () => {
       'wf.daily.hexhive',
       'wf.daily.anagrams',
     ]);
+  });
+
+  it('uses the 1.1.2 weekly board', () => {
+    expect(WEEKLY_BOARD_ID).toBe('wf.weekly.fury2');
   });
 });
 
