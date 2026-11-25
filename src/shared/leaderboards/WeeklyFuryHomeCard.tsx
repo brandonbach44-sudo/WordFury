@@ -15,10 +15,7 @@ import { localDateISO, weekMondayISO } from './dates';
 import { flushPending } from './submit';
 import { promptGameCenterSignIn, SIGN_IN_PROMPT } from './TodayLeaderboardCard';
 import { useLeaderboard } from './useLeaderboard';
-import { WeeklyRowView } from './WeeklyFurySection';
-
-export const WEEKLY_NOT_OPEN = 'Weekly Fury opens Monday';
-export const WEEKLY_NOT_OPEN_DETAIL = "The week's top players will show here.";
+import { WEEKLY_NOT_OPEN, WEEKLY_NOT_OPEN_DETAIL, WeeklyRowView } from './WeeklyFurySection';
 
 export const WeeklyFuryHomeCard: React.FC<{ style?: StyleProp<ViewStyle> }> = ({ style }) => {
   const { background } = useTheme();

@@ -31,6 +31,10 @@ import { useLeaderboard } from './useLeaderboard';
 
 const FLAME = '#e85d04';
 
+// Before a week opens, on Your Fury and the home card.
+export const WEEKLY_NOT_OPEN = 'Weekly Fury opens Monday';
+export const WEEKLY_NOT_OPEN_DETAIL = "The week's top players will show here.";
+
 export const WeeklyFurySection: React.FC = () => {
   const { background } = useTheme();
   const gc = useGameCenterState();
@@ -120,7 +124,11 @@ export const WeeklyFurySection: React.FC = () => {
       </Pressable>
     );
   } else if (status === 'notOpen') {
-    list = <Text style={[styles.note, { color: background.secondaryText }]}>Weekly Fury opens Monday</Text>;
+    list = (
+      <View style={[styles.card, styles.list, cardColors(background)]}>
+        <MessageRow text={WEEKLY_NOT_OPEN} detail={WEEKLY_NOT_OPEN_DETAIL} first />
+      </View>
+    );
   } else if (status === 'loading') {
     list = <Text style={[styles.note, { color: background.secondaryText }]}>Loading...</Text>;
   }
