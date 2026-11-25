@@ -12,7 +12,9 @@ const CACHE_MS = 60000;
  * Where a board stands right now:
  *   - open: an occurrence is open, for this puzzle date or Monday
  *   - notOpen: Game Center answered and the board's first occurrence starts
- *     later (the weekly board before its first week)
+ *     later (the weekly board before its first week), whether it reports
+ *     that start as the current start date or, with no current one, as the
+ *     next start date
  *   - unknown: Game Center couldn't be read, or no occurrence is open
  */
 export type OccurrenceStatus = { kind: 'open'; dateISO: string } | { kind: 'notOpen' } | { kind: 'unknown' };
@@ -28,6 +30,10 @@ export async function occurrenceStatus(boardId: string): Promise<OccurrenceStatu
     const now = Date.now();
     let status: OccurrenceStatus;
     if (occ.startDate > 0 && now < occ.startDate) {
+      status = { kind: 'notOpen' };
+    } else if (occ.startDate <= 0 && occ.nextStartDate > now) {
+      // Before a recurring board's first occurrence GameKit has no current
+      // start date (sent as -1), only the next one.
       status = { kind: 'notOpen' };
     } else if (occ.startDate > 0 && now < occ.startDate + occ.durationSeconds * 1000) {
       status = { kind: 'open', dateISO: puzzleDateForOccurrence(occ.startDate) };
