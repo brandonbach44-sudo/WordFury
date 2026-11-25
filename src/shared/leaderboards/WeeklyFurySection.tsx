@@ -2,8 +2,9 @@
 //
 // The weekly Fury board on Your Fury: a hero card with the week's Fury
 // points and the player's weekly place, This week / Last week, the board
-// itself (each row shows seven Monday-to-Sunday squares and a medal count
-// read from the entry's context). Under the hero, a Score breakdown row opens
+// itself (each row shows eight game-colour squares, filled for the games
+// that player finished today, and a medal count, both read from the entry's
+// context). Under the hero, a Score breakdown row opens
 // app/fury-breakdown.tsx with the rules and the player's own breakdown.
 //
 // Signed-out players keep their finishing points from the local ledger:
@@ -13,6 +14,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ALL_GAME_IDS } from '../dailyReminders';
+import { accentForGame } from '../gameColors';
 import { heroFontSize } from '../heroFontSize';
 import { withOpacity } from '../ResultsScreen';
 import { useTheme } from '../ThemeContext';
@@ -23,13 +26,12 @@ import type { BoardRow } from './entries';
 import { furyCardColors as cardColors, fmtFury as fmt, WEEK_OPTIONS, type Week } from './FuryBreakdown';
 import { MAX_WEEKLY_FURY } from './furyPoints';
 import { useGameCenterState } from './gameCenter';
-import { loadWeek, refreshFury, unpackWeeklyContext, type WeekBreakdown } from './ledger';
+import { gamesFinishedToday, loadWeek, refreshFury, unpackWeeklyContext, type WeekBreakdown } from './ledger';
 import { Segmented } from './Segmented';
 import { promptGameCenterSignIn, SIGN_IN_PROMPT } from './TodayLeaderboardCard';
 import { MEDAL_COLORS, PlaceMarker, RankMark, rankMarkFor } from './ui';
 import { useLeaderboard } from './useLeaderboard';
 
-const FLAME = '#e85d04';
 
 // Before a week opens, on Your Fury and the home card.
 export const WEEKLY_NOT_OPEN = 'Weekly Fury opens Monday';
@@ -184,12 +186,12 @@ export const WeeklyFurySection: React.FC = () => {
 
 /** One row of the weekly board, on Your Fury and the home card. */
 export const WeeklyRowView: React.FC<{ row: BoardRow; monday: string; first?: boolean }> = ({ row, monday, first }) => {
-  const { background } = useTheme();
+  const { background, colorBlindMode } = useTheme();
   const ctx = unpackWeeklyContext(row.context);
-  // Squares and medals only mean something for the week they were packed for.
-  const valid = ctx.weekId === weekIdFor(monday);
-  const days = valid ? ctx.dailiesDone : [0, 0, 0, 0, 0, 0, 0];
-  const podiums = valid ? ctx.podiums : 0;
+  // Medals only mean something for the week they were packed for.
+  const podiums = ctx.weekId === weekIdFor(monday) ? ctx.podiums : 0;
+  // Filled only for games finished today, in the current week (see ledger.ts).
+  const today = gamesFinishedToday(row.context, monday, localDateISO());
   return (
     <View
       style={[
@@ -214,25 +216,20 @@ export const WeeklyRowView: React.FC<{ row: BoardRow; monday: string; first?: bo
             </View>
           )}
         </View>
-        <View style={styles.dots}>
-          {days.map((n, i) => (
-            <View
-              key={i}
-              style={[
-                styles.dot,
-                {
-                  backgroundColor:
-                    n >= 7
-                      ? FLAME
-                      : n >= 4
-                        ? withOpacity(FLAME, 0.65)
-                        : n >= 1
-                          ? withOpacity(FLAME, 0.35)
-                          : withOpacity(background.borderColor, 0.18),
-                },
-              ]}
-            />
-          ))}
+        <View style={styles.squares}>
+          {ALL_GAME_IDS.map((g) => {
+            const color = accentForGame(g, colorBlindMode);
+            const done = today.has(g);
+            return (
+              <View
+                key={g}
+                style={[
+                  styles.square,
+                  done ? { backgroundColor: color, borderColor: color } : { borderColor: withOpacity(color, 0.4) },
+                ]}
+              />
+            );
+          })}
         </View>
       </View>
       <Text style={[styles.wkScore, { color: background.textColor }]}>{fmt(row.value)}</Text>
@@ -275,7 +272,7 @@ const styles = StyleSheet.create({
   med: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   medDot: { width: 9, height: 9, borderRadius: 5 },
   medText: { fontSize: 11, fontWeight: '800' },
-  dots: { flexDirection: 'row', gap: 3, marginTop: 5 },
-  dot: { width: 9, height: 9, borderRadius: 3 },
+  squares: { flexDirection: 'row', gap: 4, marginTop: 5 },
+  square: { width: 12, height: 12, borderRadius: 3, borderWidth: 1.5 },
   wkScore: { fontSize: 15, fontWeight: '900' },
 });

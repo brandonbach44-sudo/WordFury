@@ -1,8 +1,11 @@
 import { GAME_IDS } from '../boards';
+import { weekdayIndex, weekIdFor } from '../dates';
 import { placementBonus } from '../furyPoints';
 import {
   boardCloseMs,
   bonusCreditMonday,
+  gamesFinishedToday,
+  gamesMaskFor,
   isBonusLate,
   packWeeklyContext,
   prune,
@@ -108,12 +111,80 @@ describe('crediting', () => {
 
 describe('weekly context', () => {
   it('packs and unpacks exactly', () => {
-    const ctx = packWeeklyContext(202647, 56, [8, 8, 0, 3, 8, 1, 15]);
+    const ctx = packWeeklyContext(202647, 56, 3, 0b10110101);
     expect(Number.isSafeInteger(ctx)).toBe(true);
-    expect(unpackWeeklyContext(ctx)).toEqual({ weekId: 202647, podiums: 56, dailiesDone: [8, 8, 0, 3, 8, 1, 15] });
+    expect(unpackWeeklyContext(ctx)).toEqual({ weekId: 202647, podiums: 56, dayIndex: 3, gamesMask: 0b10110101 });
   });
-  it('matches the plan’s formula', () => {
-    expect(packWeeklyContext(202647, 2, [1, 0, 0, 0, 0, 0, 0])).toBe(202647 * 2 ** 34 + 2 * 2 ** 28 + 1);
+
+  it('matches the plan formula', () => {
+    expect(packWeeklyContext(202647, 2, 4, 5)).toBe(202647 * 2 ** 34 + 2 * 2 ** 28 + 4 * 2 ** 8 + 5);
+  });
+
+  it('stays exact at the largest values', () => {
+    const ctx = packWeeklyContext(209953, 63, 6, 255);
+    expect(Number.isSafeInteger(ctx)).toBe(true);
+    expect(unpackWeeklyContext(ctx)).toEqual({ weekId: 209953, podiums: 63, dayIndex: 6, gamesMask: 255 });
+  });
+
+  it('round-trips every games bit on its own', () => {
+    for (let bit = 0; bit < 8; bit++) {
+      expect(unpackWeeklyContext(packWeeklyContext(202649, 1, 2, 1 << bit)).gamesMask).toBe(1 << bit);
+    }
+  });
+
+  it('round-trips every day index', () => {
+    for (let d = 0; d <= 6; d++) {
+      const c = unpackWeeklyContext(packWeeklyContext(202649, 0, d, 0b11));
+      expect(c.dayIndex).toBe(d);
+      expect(c.gamesMask).toBe(0b11);
+    }
+  });
+
+  it('sets one bit per finished game, in GAME_IDS order', () => {
+    const today = '2026-12-02';
+    const ledger: Ledger = {
+      [today]: {
+        furdle: { finish: 50, bonus: null },
+        hexhive: { finish: 20, bonus: null },
+        anagrams: { finish: 0, bonus: null },
+      },
+      '2026-12-01': { wordsmith: { finish: 50, bonus: null } },
+    };
+    const mask = gamesMaskFor(ledger, today);
+    expect(mask).toBe((1 << GAME_IDS.indexOf('furdle')) | (1 << GAME_IDS.indexOf('hexhive')));
+    GAME_IDS.forEach((g, i) => {
+      expect(gamesMaskFor({ [today]: { [g]: { finish: 50, bonus: null } } }, today)).toBe(1 << i);
+    });
+    expect(gamesMaskFor({}, today)).toBe(0);
+  });
+});
+
+describe('game squares on the weekly board', () => {
+  // Wednesday Dec 2, 2026; its week starts Monday Nov 30.
+  const today = '2026-12-02';
+  const monday = '2026-11-30';
+  const week = weekIdFor(monday);
+  const mask = (1 << GAME_IDS.indexOf('furdle')) | (1 << GAME_IDS.indexOf('wordsmith'));
+
+  it('fills the games finished today', () => {
+    const ctx = packWeeklyContext(week, 0, weekdayIndex(today), mask);
+    expect([...gamesFinishedToday(ctx, monday, today)].sort()).toEqual(['furdle', 'wordsmith']);
+  });
+
+  it('shows outlines when the entry was packed on another day', () => {
+    const ctx = packWeeklyContext(week, 0, weekdayIndex(today) - 1, mask);
+    expect(gamesFinishedToday(ctx, monday, today).size).toBe(0);
+  });
+
+  it('shows outlines when the entry was packed for another week', () => {
+    const ctx = packWeeklyContext(weekIdFor('2026-11-23'), 0, weekdayIndex(today), mask);
+    expect(gamesFinishedToday(ctx, monday, today).size).toBe(0);
+  });
+
+  it('shows outlines on the Last week view', () => {
+    const lastMonday = '2026-11-23';
+    const ctx = packWeeklyContext(weekIdFor(lastMonday), 0, weekdayIndex(today), mask);
+    expect(gamesFinishedToday(ctx, lastMonday, today).size).toBe(0);
   });
 });
 

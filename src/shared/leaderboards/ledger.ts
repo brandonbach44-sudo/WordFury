@@ -18,7 +18,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GameCenter } from '../../../modules/game-center';
 import { BOARDS, GAME_IDS, WEEKLY_BOARD_ID, type GameId } from './boards';
-import { addDaysISO, dayNumber, diffDaysISO, localDateISO, weekIdFor, weekMondayISO } from './dates';
+import { addDaysISO, dayNumber, diffDaysISO, localDateISO, weekdayIndex, weekIdFor, weekMondayISO } from './dates';
 import { loadLocalStanding } from './entries';
 import { finishPoints, placementBonus, type BonusTier } from './furyPoints';
 import { isSignedIn } from './gameCenter';
@@ -141,31 +141,58 @@ export function weekBreakdown(ledger: Ledger, mondayISO: string): WeekBreakdown 
 }
 
 // Packed weekly context (fits in 53 bits, so JS numbers carry it exactly):
-//   weekId * 2^34 + podiums * 2^28 + sum over d of dailiesDone[d] << (4 * d)
+//   weekId * 2^34 + podiums * 2^28 + dayIndex * 2^8 + gamesMask
+// dayIndex is the poster's local weekday (0 Monday to 6 Sunday) and gamesMask
+// has one bit per game in GAME_IDS order, set when that game's daily was
+// finished that day. The weekly board shows today's games from it.
+const POW_8 = 2 ** 8;
 const POW_28 = 2 ** 28;
 const POW_34 = 2 ** 34;
 
-export function packWeeklyContext(weekId: number, podiums: number, dailiesDone: number[]): number {
-  let days = 0;
-  for (let d = 0; d < 7; d++) {
-    const n = Math.max(0, Math.min(15, Math.round(dailiesDone[d] ?? 0)));
-    days += n * 2 ** (4 * d);
-  }
+export type WeeklyContext = { weekId: number; podiums: number; dayIndex: number; gamesMask: number };
+
+export function packWeeklyContext(weekId: number, podiums: number, dayIndex: number, gamesMask: number): number {
   const p = Math.max(0, Math.min(63, Math.round(podiums)));
-  return weekId * POW_34 + p * POW_28 + days;
+  const d = Math.max(0, Math.min(6, Math.round(dayIndex)));
+  const m = Math.max(0, Math.min(255, Math.round(gamesMask)));
+  return weekId * POW_34 + p * POW_28 + d * POW_8 + m;
 }
 
-export function unpackWeeklyContext(ctx: number): { weekId: number; podiums: number; dailiesDone: number[] } {
+export function unpackWeeklyContext(ctx: number): WeeklyContext {
   const weekId = Math.floor(ctx / POW_34);
   const rest = ctx - weekId * POW_34;
   const podiums = Math.floor(rest / POW_28);
-  let days = rest - podiums * POW_28;
-  const dailiesDone: number[] = [];
-  for (let d = 0; d < 7; d++) {
-    dailiesDone.push(days % 16);
-    days = Math.floor(days / 16);
-  }
-  return { weekId, podiums, dailiesDone };
+  const low = rest - podiums * POW_28;
+  const dayIndex = Math.floor(low / POW_8) % 8;
+  const gamesMask = low % POW_8;
+  return { weekId, podiums, dayIndex, gamesMask };
+}
+
+/** One bit per game in GAME_IDS order, set when that day's daily was finished. Pure, for testing. */
+export function gamesMaskFor(ledger: Ledger, dateISO: string): number {
+  const day = ledger[dateISO] ?? {};
+  let mask = 0;
+  GAME_IDS.forEach((g, i) => {
+    if ((day[g]?.finish ?? 0) > 0) mask |= 1 << i;
+  });
+  return mask;
+}
+
+/**
+ * The games an entry's context shows as finished today, for a board showing
+ * the week starting `shownMondayISO`. Empty unless that week is the viewer's
+ * current week, the entry was packed for it, and on the viewer's weekday.
+ * Pure, for testing.
+ */
+export function gamesFinishedToday(ctx: number, shownMondayISO: string, todayISO: string): Set<GameId> {
+  const out = new Set<GameId>();
+  if (shownMondayISO !== weekMondayISO(todayISO)) return out;
+  const c = unpackWeeklyContext(ctx);
+  if (c.weekId !== weekIdFor(shownMondayISO) || c.dayIndex !== weekdayIndex(todayISO)) return out;
+  GAME_IDS.forEach((g, i) => {
+    if (c.gamesMask & (1 << i)) out.add(g);
+  });
+  return out;
 }
 
 // ── Storage ───────────────────────────────────────────────────────────────────
@@ -354,7 +381,7 @@ export async function submitWeeklyTotal(): Promise<void> {
   const { ledger } = await loadLedger();
   const week = weekBreakdown(ledger, monday);
   if (week.total <= 0) return;
-  const context = packWeeklyContext(weekIdFor(monday), week.podiums, week.dailiesDone);
+  const context = packWeeklyContext(weekIdFor(monday), week.podiums, weekdayIndex(today), gamesMaskFor(ledger, today));
   try {
     await GameCenter.submitScore(WEEKLY_BOARD_ID, week.total, context);
   } catch {
